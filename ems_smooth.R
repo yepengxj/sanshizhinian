@@ -2,7 +2,135 @@ library(plyr)
 library(EMD)
 library(Rlibeemd)
 library(XML)
+library(quantstrat)
+library(dtw)
 
+
+
+######时间窗口截取函数#####
+##输入
+##x:截取开始位置
+##y:被截取序列
+##k:截取长度
+linestep<-function(x,y,k)
+{
+  #窗口开始时间+窗口结束时间+窗口中数据内容
+  c(as.numeric(.indexDate(y[x])),as.numeric(.indexDate(y[x+k-1])),as.numeric(y[x:(x+k-1)]))
+}
+
+
+######时间窗矩阵函数#####
+#将时间序列按制定长度转换成矩阵，以方便后续最小二乘转换和距离计算
+##输入
+##list_data:待转换序列
+##k:截取长度
+list2matrix_stepbystep<-function(list_data,k)
+{
+  
+  list_len <-length(list_data)
+  
+  if(list_len < k)
+  {
+    matrix_tmp<-matrix(c(as.numeric(.indexDate(list_data[1])),as.numeric(list_data)),nrow=1,ncol=list_len+1)
+  }
+  else
+  {
+    #matrix_tmp<-matrix(nrow=list_len-k+1,ncol=k+1)
+    
+    #for(i in 1:(list_len-k+1))
+    #{
+    #  matrix_tmp[i,]<-c(as.numeric(.indexDate(list_data[i])),as.numeric(list_data[seq(i,(i+k-1))]))
+    #}
+    matrix_tmp<-matrix(nrow = list_len-k+1,ncol=k)
+    matrix_tmp<-sapply(1:(list_len-k+1),linestep,y=list_data,k=k)
+  }
+  
+  matrix_tmp
+}
+
+######最小二乘转换并计算dtw距离#####
+##输入
+##x:被拟合向量,被拟合向量长度为样本向量长度+预测长度，目前预测长度固定为3天
+##y:样本向量
+##i:预测长度
+lsfit_x<-function(x,y)
+{
+  i=length(x[c(-1,-2)])-length(y)
+  
+  if(all(x[c(-1,-2,((length(x)-(i-1)):length(x))*-1)]==y))
+  {
+    print("dfdfdfdfdfdf")
+  }
+  
+  #确定最小二乘线性拟合参数，其中x去除开始时间、结束时间以及预测长度
+  tmpmodel<-lsfit(x=as.numeric(x[c(-1,-2,((length(x)-(i-1)):length(x))*-1)]),y=as.numeric(y))
+  #计算本拟合向量与样本向量的距离
+  dis<-dtw(x[c(-1,-2,((length(x)-(i-1)):length(x))*-1)],y)$distance
+  
+  if(dis>0)
+  {
+    sim_rato<- 1/dis
+  }
+  else
+  {
+    sim_rato<- 0
+  }
+  
+  return(c(x[1:2],sim_rato,x[c(-1,-2)]*tmpmodel$coefficients["X"]+tmpmodel$coefficients["Intercept"]))
+}
+
+
+######相似体拟合模型#####
+##输入
+##x:预测时间序列,向量
+##y:样本时间序列,矩阵
+##j:预测长度
+##i:相似度排名
+ac_model<-function(x,y,i)
+{
+  print(as.Date(x[2],format="%Y-%m-%d",origin = "1970-01-01"))
+  dfddfd<-aaply(y,1,"lsfit_x",as.numeric(x)[3:length(x)], .parallel = F)
+  # dfddfd<-t(apply(y,1,"lsfit_x",as.numeric(x)[3:length(x)]))
+  t<-ncol(y)-length(x)
+  # write.table(dfddfd,'~/Downloads/log.txt',sep=",")
+  dfddfd<-dfddfd[dfddfd[,3]!=0,]
+  head_res<-head(dfddfd[order(-dfddfd[,3]),],i)
+  c("start_date"=x[1],"end_date"=x[2],colSums((head_res[,3])/sum(head_res[,3])*(head_res[,(ncol(head_res)-t+1):ncol(head_res)])))
+  
+  print( c("start_date"=x[1],"end_date"=x[2],colSums((head_res[,3])/sum(head_res[,3])*(head_res[,(ncol(head_res)-t+1):ncol(head_res)]))))
+  
+}
+
+
+######相似体拟合模型#####
+##输入
+##x:预测时间序列
+##y:样本时间序列
+##i:预测时间滑动窗口
+##j:预测长度
+
+ac_indicator<-function(x,y,i,j)
+{
+  #dim(x)
+  #dim(y)
+  #将预测数据序列按预测滑动窗口长度i转换为矩阵
+  pred_data<-t(list2matrix_stepbystep(x,i))
+  
+  
+  #将样本数据按i+j长度转换为矩阵
+  sample_data<-t(list2matrix_stepbystep(y,(i+j)))
+  
+  #result<-t(apply(pred_data,1,"ac_model",y=sample_data,i=5))
+  result<-adply(pred_data,1,"ac_model",y=sample_data,i=5, .parallel = F)
+  
+  colnames(result)<-c(colnames(result)[1:3],sapply(c(1:j),function(x){paste("pred_result",x,sep="")}))
+  #result_ts<-xts(result[,c(-1)],order.by=as.Date(result[,3],format="%Y-%m-%d",origin = "1970-01-01"))
+  
+  
+  #colnames(result_ts)<-sapply(c(1:j),function(x){paste("pred_result",x,sep="")})
+  result[,-1]
+  #result_ts
+}
 
 
 get_acf<-function(x)
@@ -30,6 +158,7 @@ Rlibeemd_eemd_func<-function(x,param_list){
   
   list("imf"=imf,"nimf"=nimf,"residue"=residue)
 }
+
 
 EMD_emd_func<-function(x,param_list){
   EMD::emd(x, stoprule = "type4")

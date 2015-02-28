@@ -1,18 +1,7 @@
 library(plyr)
 library(EMD)
 library(Rlibeemd)
-
-
-
-x<-as.numeric(xxx["2000-01-01/","close"])
-
-plot(x)
-
-close_emd_smooth<-emd_smooth(x)
-colnames(close_emd_smooth)<-"close_emd_smooth"
-lines(close_emd_smooth,col="red")
-
-close_emd_smooth_ts<-cbind(xxx["2000-01-01/","close"],close_emd_smooth)[,2]
+library(XML)
 
 
 
@@ -30,16 +19,6 @@ get_acf1<-function(x)
   x_exp<-x_exp/x_exp[1]
 }
 
-
-x<-as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"])
-str(emd_c(as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"])))
-
-emd_c<-Rlibeemd::eemd
-
-emd_smooth(as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"]),EMD_emd_func,get_acf,get_k,noise_t)
-
-
-test111<-Rlibeemd_eemd_func(as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"]))
 Rlibeemd_eemd_func<-function(x,param_list){
   x_emd_t <- Rlibeemd::eemd(x, num_siftings = 50, ensemble_size = 100)
   
@@ -57,19 +36,14 @@ EMD_emd_func<-function(x,param_list){
 
 }
 
-x<-as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"])
-emd_func<-Rlibeemd_eemd_func
-get_acf2<-get_acf
-get_k2<-get_k
-noise_t2<-noise_t
 
-emd_smooth<-function(x,emd_func,get_acf2,get_k2,noise_t2,param_list)
+emd_smooth<-function(x,emd_func,get_acf2,get_k2,noise_t2,smooth_t2,param_list)
 {
   x_emd<-emd_func(x)
   
   xcorr<-aaply(x_emd$imf,2,get_acf2)
   
-  xcorr_mean<-aaply(1:(x_emd$nimf-1),1,get_k2,xcorr=xcorr,To=x_emd$nimf) 
+  xcorr_mean<-get_k2(xcorr,x_emd)
   
   k<-which.max(aaply(xcorr_mean,1,function(x){sqrt(sum(x^2))}))
   
@@ -80,7 +54,9 @@ emd_smooth<-function(x,emd_func,get_acf2,get_k2,noise_t2,param_list)
     
     if(x>0)
     {
-      aaply(as.numeric(imf[,x]),1,smooth,t_x[x])
+      
+      x<-1
+      aaply(as.numeric(imf[,x]),1,smooth_t2,t_x[x])
     }
     else
     {
@@ -123,85 +99,30 @@ noise_t<-function(x,imf){
   }
 }
 
-smooth_data<-eemd_smooth(xxx$close)
-smooth_data1<-emd_smooth(as.numeric(xxx$close))
+noise_t1<-function(x,imf){
+  
+  sd(imf[,x])*sqrt(2*log(length(imf[,x])))
 
-plot_range<-(2000:2200)
-plot(as.numeric(xxx$close[plot_range]),type="l")
-
-lines(smooth_data[plot_range],type="l",col="red")
-lines(smooth_data1[plot_range],type="l",col="green")
-
-xxx$close[1:500]-smooth_data[1:500]
-
-eemd_smooth<-function(x)
-{
-  x_emd <- Rlibeemd::eemd(x, num_siftings = 50, ensemble_size = 100)
-  
-  nimf<-((dim(x_emd)[2])-1)
-  
-  imf<-x_emd[,(1:(nimf))]
-  
-  residue<-x_emd[,nimf+1]
-
-  xcorr<-aaply(imf,2,get_acf)
-  
-  xcorr_mean<-aaply(1:(nimf-1),1,get_k,xcorr=xcorr,To=nimf) 
-  
-  k<-which.max(aaply(xcorr_mean,1,function(x){sqrt(sum(x^2))}))
-  
-  t_x<-aaply(1:(k-1),1,function(x,imf){
-    if(x>0)
-    {
-      median(abs(imf[,x])) * sqrt(2*(log10(length(imf[,x])))) /0.6745
-    }
-    else
-    {
-      0
-    }
-  },imf)
-  
-  imf_smooth<-adply(1:(k-1),1,function(x,imf,t_x){
-    
-    if(x>0)
-    {
-
-      ifelse(abs(imf[,x])>t_x[x],sign(imf[,x])*(abs(imf[,x])-t_x[x]),0)
-    }
-    else
-    {
-      rep(0,length(imf[,1]))
-    }
-  },
-  imf,t_x
-  )
-  
-  imf_smooth<-t(imf_smooth[,-1])
-  
-  if(k<=2)
-  {
-    aaply( cbind(imf_smooth,imf[,(2:nimf)],residue) , 1, sum)
-    
-  }
-  else
-  {
-    aaply( cbind(imf_smooth[,(1:(k-1))],imf[,(k:nimf)],residue), 1, sum)
-  }
-  
-  
 }
 
-HS300_idx_ts$close_emd_smooth<-emd_smooth(as.numeric(HS300_idx_ts[,"close"]))
-plot(HS300_idx_ts["2006-05-01/2008-01-01","close"])
-lines(HS300_idx_ts["2006-05-01/2008-01-01","close_emd_smooth"],col="red")
 
-get_k<-function(k,xcorr,To)
+get_k<-function(xcorr,x_emd)
 {
+  aaply(1:(x_emd$nimf-1),1,function(k,xcorr,To){
+    ( k * (To-k) / (To^2)) * ( ( aaply(xcorr[,(1:k)],1,sum) /k)  - ( aaply(xcorr[,(k+1):To],1,sum) /(To-k)) )
+  },xcorr=xcorr,To=x_emd$nimf) 
+  
  
-  ( k * (To-k) / (To^2)) * ( ( aaply(xcorr[,(1:k)],1,sum) /k)  - ( aaply(xcorr[,(k+1):To],1,sum) /(To-k)) )
   
 }
 
+get_k1<-function(xcorr,x_emd)
+{
+  aaply(xcorr,1,function(x){
+    sum((x[1:50])^2)/sum(x^2)
+  })
+  
+}
 
 smooth<-function(i,t_x1)
 {
@@ -215,13 +136,17 @@ smooth<-function(i,t_x1)
   }
 }
 
+smooth1<-function(i,t_x1)
+{
 
+  u<-0.5
+  if(abs(i) > t_x1)
+  {
+    (1-u)*i+u*sign(i)*(abs(i) - t_x1 )
+  }
+  else
+  {
+    0
+  }
+}
 
-
-rep(2,2)*rep(4,2)
-
-
-xcorr[kmax]
-k<-10
-
-length(xxx["2015-01-01/","close"])

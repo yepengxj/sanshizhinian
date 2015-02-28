@@ -105,16 +105,11 @@ ac_model<-function(x,y,i)
 ##y:样本时间序列
 ##i:预测时间滑动窗口
 ##j:预测长度
-x<-xxx_close_xts["2011-01-04/2011-01-30",2]
-y<-xxx_close_xts["/2011-01-04",2]
-i<-10
-j<-3
 
-ac_indicator(x,y,i,j)
 ac_indicator<-function(x,y,i,j)
 {
-  dim(x)
-  dim(y)
+  #dim(x)
+  #dim(y)
   #将预测数据序列按预测滑动窗口长度i转换为矩阵
   pred_data<-t(list2matrix_stepbystep(x,i))
 
@@ -124,12 +119,14 @@ ac_indicator<-function(x,y,i,j)
 
   #result<-t(apply(pred_data,1,"ac_model",y=sample_data,i=5))
   result<-adply(pred_data,1,"ac_model",y=sample_data,i=5, .parallel = F)
-  result_ts<-xts(result[,c(-1,-2,-3)],order.by=as.Date(result[,3],format="%Y-%m-%d",origin = "1970-01-01"))
+  
+  colnames(result)<-c(colnames(result)[1:3],sapply(c(1:j),function(x){paste("pred_result",x,sep="")}))
+  #result_ts<-xts(result[,c(-1)],order.by=as.Date(result[,3],format="%Y-%m-%d",origin = "1970-01-01"))
   
   
-  colnames(result_ts)<-sapply(c(1:ncol(result_ts)),function(x){paste("pred_result",x,sep="")})
-  #result
-  result_ts
+  #colnames(result_ts)<-sapply(c(1:j),function(x){paste("pred_result",x,sep="")})
+  result[,-1]
+  #result_ts
 }
 
 #EMD分解加入

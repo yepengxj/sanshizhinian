@@ -67,27 +67,74 @@ cntrade <- function(tickers, path = "", start = 19910101, end = "") {
   }
 }
 
-cntrade(c('0000300'), path = "~/temp", start = 19900101, end = 20150226)
+cntrade(c('0000300'), path = "~/temp", start = 19900101, end = 20150227)
 
 xxx<-read.csv("~/temp/0000300.csv",header=F,skip=1,encoding = "UTF-8")
 
 xxx<-xts(xxx[,c(4,5,6,7,12)],order.by=as.Date(xxx[,1],"%Y-%m-%d"))
 
-tail(xxx,10)
 
 colnames(xxx)<-c("close","high","low","open","vol")
 xxx<-xxx[!xxx$close==0]
 
-iconv(readLines("http://hq.sinajs.cn/list=sh000300"),"GB2312","UTF-8")
-cur_data_str<-strsplit(iconv(readLines("http://hq.sinajs.cn/list=sh000300")[[1]],"GB2312","UTF-8"),",",fixed=T)[[1]]
+t1<-list(func_name="Rlibeemd_eemd_func",func=Rlibeemd_eemd_func)
+t1$func
+eemd_list<-list(
+  list(func_name="Rlibeemd_eemd_func",func=Rlibeemd_eemd_func),
+  list(func_name="EMD_emd_func",func=EMD_emd_func)
+  )
 
-cur_data<-cur_data_str[c(31,4,5,6,2,9)]
-cur_data_xts<-xts(matrix(as.numeric(cur_data[c(2:6)]),nrow=1),order.by=as.Date(cur_data[1],"%Y-%m-%d"))
-xxx<-rbind(xxx,cur_data_xts)
-tail(xxx,10)
+acf_list<-list(
+  list(func_name="get_acf",func=get_acf),
+  list(func_name="get_acf1",func=get_acf1)
+  )
 
-cur_xxx<-xxx["/2015-02-25",]
-cur_xxx$close_eemd_smooth<-eemd_smooth(as.numeric(cur_xxx["/2015-02-25","close"]))
+get_k_list<-list(
+  list(func_name="get_k",func=get_k),
+  list(func_name="get_k1",func=get_k1)
+  )  
+
+noise_t_list<-list(
+  list(func_name="noise_t",func=noise_t),
+  list(func_name="noise_t1",func=noise_t1)
+  )  
+  
+smooth_list<-list(
+  list(func_name="smooth",func=smooth),
+  list(func_name="smooth1",func=smooth1))
+
+
+for(eemd in (eemd_list))
+{
+  for(acf in (acf_list))
+  {
+    for (get_k in (get_k_list))
+    {
+      for(noise_t in (noise_t_list))
+      {
+        for(smooth in (smooth_list))
+        {          
+          print(eemd$func_name)
+          print(acf$func_name)
+          print(get_k$func_name)
+          print(noise_t$func_name)
+          print(smooth$func_name)
+          curr_xxx<-xxx
+          
+          curr_xxx$smooth_close<-emd_smooth(as.numeric(curr_xxx[,"close"]),eemd$func,acf$func,get_k$func,noise_t$func,smooth$func)
+        }
+      }
+    }
+  }
+  
+}
+  
+cur_xxx$close_eemd_smooth<-emd_smooth(as.numeric(cur_xxx[,"close"]),Rlibeemd_eemd_func,get_acf,get_k,noise_t,smooth)
+xxx$close_eemd_smooth<-emd_smooth(as.numeric(xxx[,"close"]),Rlibeemd_eemd_func,get_acf,get_k,noise_t)
+
+xxx$paste("1","2",sep="")<-emd_smooth(as.numeric(cur_xxx[,"close"]),Rlibeemd_eemd_func,get_acf,get_k,noise_t,smooth)
+
+eemd_smooth(as.numeric(cur_xxx["/2015-02-25","close"]))-cur_xxx$close_eemd_smooth
 xxx$close_eemd_smooth<-eemd_smooth(as.numeric(xxx[,"close"]))
 xxx$close_ema5<-EMA(xxx[,"close"],5)
 xxx$close_sma5<-SMA(xxx[,"close"],5)
@@ -101,7 +148,7 @@ lines(xxx["2015-02-04/","close_ema5"])
 lines(xxx["2015-02-04/","close_sma5"])
 
 
-result_data_hs300_eemd_smooth<-aaply(as.numeric(.indexDate(xxx["2015-02-04/2015-02-06","close_sma5"])), 1, 
+result_data_hs300_eemd_smooth<-aaply(as.numeric(.indexDate(cur_xxx["2015-02-04/2015-02-05","close_eemd_smooth"])), 1, 
                                      function(x,ts,i,j){
                                        start_date_id<-which(.indexDate(ts)==x)
                                        end_date<-.indexDate(ts)[(start_date_id+i-1)]
@@ -117,7 +164,25 @@ result_data_hs300_eemd_smooth<-aaply(as.numeric(.indexDate(xxx["2015-02-04/2015-
                                          ac_indicator(ts[start_end_str],ts[start_str],i,j)
                                        }
                                        
-                                     },xxx["2006-01-01/","close_sma5"],10,3)
+                                     },cur_xxx["2006-01-01/","close_eemd_smooth"],10,4)
+
+result_data_hs300_eemd_smooth<-aaply(as.numeric(.indexDate(xxx["2015-02-04/2015-02-09","close_eemd_smooth"])), 1, 
+                                     function(x,ts,i,j){
+                                       start_date_id<-which(.indexDate(ts)==x)
+                                       end_date<-.indexDate(ts)[(start_date_id+i-1)]
+                                       if(!is.na(end_date))
+                                       {
+                                         start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
+                                                              "/",
+                                                              as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
+                                                              sep="")
+                                         start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
+                                         print(start_end_str)
+                                         print(start_str)
+                                         ac_indicator(ts[start_end_str],ts[start_str],i,j)
+                                       }
+                                       
+                                     },xxx["2006-01-01/","close_eemd_smooth"],10,3)
 
 
 

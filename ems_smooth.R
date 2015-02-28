@@ -4,25 +4,6 @@ library(Rlibeemd)
 
 
 
-sgn<-function(x)
-{
-  if(x==0)
-  {
-    0
-  }
-  else
-  {
-    if(x>0)
-    {
-      1
-    }
-    else
-    {
-      -1
-    }
-  }
-}
-
 x<-as.numeric(xxx["2000-01-01/","close"])
 
 plot(x)
@@ -48,34 +29,58 @@ get_acf1<-function(x)
   
   x_exp<-x_exp/x_exp[1]
 }
+
+
 x<-as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"])
-emd_smooth<-function(x)
+str(emd_c(as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"])))
+
+emd_c<-Rlibeemd::eemd
+
+emd_smooth(as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"]),EMD_emd_func,get_acf,get_k,noise_t)
+
+
+test111<-Rlibeemd_eemd_func(as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"]))
+Rlibeemd_eemd_func<-function(x,param_list){
+  x_emd_t <- Rlibeemd::eemd(x, num_siftings = 50, ensemble_size = 100)
+  
+  nimf<-((dim(x_emd_t)[2])-1)
+  
+  imf<-as.matrix(x_emd_t[,(1:(nimf))])
+  
+  residue<-as.numeric(x_emd_t[,nimf+1])
+  
+  list("imf"=imf,"nimf"=nimf,"residue"=residue)
+}
+
+EMD_emd_func<-function(x,param_list){
+  EMD::emd(x, stoprule = "type4")
+
+}
+
+x<-as.numeric(HS300_idx_ts["2006-01-01/2009-01-22","close"])
+emd_func<-Rlibeemd_eemd_func
+get_acf2<-get_acf
+get_k2<-get_k
+noise_t2<-noise_t
+
+emd_smooth<-function(x,emd_func,get_acf2,get_k2,noise_t2,param_list)
 {
-  x_emd<-EMD::emd(x,stoprule="type4")
+  x_emd<-emd_func(x)
   
-  xcorr<-aaply(x_emd$imf,2,get_acf)
+  xcorr<-aaply(x_emd$imf,2,get_acf2)
   
-  xcorr_mean<-aaply(1:(x_emd$nimf-1),1,get_k,xcorr=xcorr,To=x_emd$nimf) 
+  xcorr_mean<-aaply(1:(x_emd$nimf-1),1,get_k2,xcorr=xcorr,To=x_emd$nimf) 
   
   k<-which.max(aaply(xcorr_mean,1,function(x){sqrt(sum(x^2))}))
   
   imf<-x_emd$imf
-  t_x<-aaply(1:(k-1),1,function(x,imf){
-   # print(x)
-    if(x>0)
-    {
-      median(abs(imf[,x])) * sqrt(2*(log10(length(imf[,x])))) /0.6745
-    }
-    else
-    {
-      0
-    }
-  },x_emd$imf)
+  t_x<-aaply(1:(k-1),1, noise_t2  ,x_emd$imf)
 
   imf_smooth<-aaply(1:(k-1),1,function(x,imf,t_x){
+    
     if(x>0)
     {
-      aaply(imf[,x],1,smooth,t_x[x])
+      aaply(as.numeric(imf[,x]),1,smooth,t_x[x])
     }
     else
     {
@@ -104,6 +109,18 @@ emd_smooth<-function(x)
     aaply( cbind(t(imf_smooth[(1:(k-1)),]),x_emd$imf[,(k:x_emd$nimf)],x_emd$residue), 1, sum)
   }
   
+}
+
+noise_t<-function(x,imf){
+  # print(x)
+  if(x>0)
+  {
+    median(abs(imf[,x])) * sqrt(2*(log10(length(imf[,x])))) /0.6745
+  }
+  else
+  {
+    0
+  }
 }
 
 smooth_data<-eemd_smooth(xxx$close)
@@ -149,7 +166,7 @@ eemd_smooth<-function(x)
     if(x>0)
     {
 
-      ifelse(abs(imf[,x])>t_x[x],sgn(imf[,x])*(abs(imf[,x])-t_x[x]),0)
+      ifelse(abs(imf[,x])>t_x[x],sign(imf[,x])*(abs(imf[,x])-t_x[x]),0)
     }
     else
     {
@@ -190,7 +207,7 @@ smooth<-function(i,t_x1)
 {
   if(abs(i) > t_x1)
   {
-    sgn(i)*(abs(i)-t_x1)
+    sign(i)*(abs(i)-t_x1)
   }
   else
   {

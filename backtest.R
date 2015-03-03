@@ -8,11 +8,7 @@ library("hht")
 xxx<-read.csv("~/temp/0000300.csv",header=F,skip=1,encoding = "UTF-8")
 xxx<-xts(xxx[,c(4,5,6,7,12)],order.by=as.Date(xxx[,1],"%Y-%m-%d"))
 colnames(xxx)<-c("close","high","low","open","vol")
-x<-"/2015-01-01"
-pres_xxx_ts[x]
 
-x<-"pred_resRlibeemd_eemd_func_get_acf1_get_k_noise_t1_smooth1"
-date_range<-"2015-02-01/"
 backtest_func<-function(date_range,xxx){
   
   aaply(list.files("~/temp/",pattern="^pred_resRlibeemd_eemd"),1,function(x,xxx,date_range){

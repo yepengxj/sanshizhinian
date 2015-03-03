@@ -5,10 +5,12 @@ library(plyr)
 library("e1071")
 library("hht")
 
+setwd("~/temp/")
+print(getwd())
 xxx<-read.csv("~/temp/0000300.csv",header=F,skip=1,encoding = "UTF-8")
 xxx<-xts(xxx[,c(4,5,6,7,12)],order.by=as.Date(xxx[,1],"%Y-%m-%d"))
 colnames(xxx)<-c("close","high","low","open","vol")
-
+q.strategy <- "qFaber"
 backtest_func<-function(date_range,xxx){
   
   aaply(list.files("~/temp/",pattern="^pred_resRlibeemd_eemd"),1,function(x,xxx,date_range){
@@ -39,11 +41,12 @@ backtest_func<-function(date_range,xxx){
     # 初始化组合和账户
     q.strategy <- "qFaber"
     initPortf(q.strategy, "ZSYH", initDate = "2002-01-31")
-    ## [1] "qFaber"
+
     initAcct(q.strategy, portfolios = q.strategy, initDate = "2002-01-31", initEq = 100000)
-    ## [1] "qFaber"
-    # 初始化指定和策略
+
     initOrders(portfolio = q.strategy, initDate = "2002-01-31")
+
+    strategy(q.strategy, store=TRUE)
     
     add.signal(q.strategy,name="sigThreshold",
                arguments = list(column="buy_signal",
@@ -52,6 +55,7 @@ backtest_func<-function(date_range,xxx){
                                 cross=TRUE),
                label="buy_signal_add"
     )
+    print("add.signal")
     
     add.signal(q.strategy,name="sigThreshold",
                arguments = list(column="sell_signal",
@@ -60,6 +64,7 @@ backtest_func<-function(date_range,xxx){
                label="sell_signal_add"
     )
     
+    print("add.signal")
     
     add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "buy_signal_add", 
                                                                sigval = TRUE, orderqty = 50000, ordertype = "market", orderside = "long", 
@@ -68,6 +73,8 @@ backtest_func<-function(date_range,xxx){
     add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "sell_signal_add", 
                                                                sigval = TRUE, orderqty = "all", ordertype = "market", orderside = "long", 
                                                                pricemethod = "market"), type = "exit", path.dep = TRUE)
+
+    print("add.rul")
     
     applyStrategy(strategy = q.strategy, portfolios = q.strategy,mktdata=pred_close_price)
     

@@ -10,9 +10,6 @@ xxx<-xts(xxx[,c(4,5,6,7,12)],order.by=as.Date(xxx[,1],"%Y-%m-%d"))
 colnames(xxx)<-c("close","high","low","open","vol")
 x<-"/2015-01-01"
 pres_xxx_ts[x]
-backtest_2009_07_01_2014_07_01<-backtest_func("2009-07-01/2014-07-01",xxx)
-backtest_2014_07_01<-backtest_func("2014-07-01/",xxx)
-
 
 x<-"pred_resRlibeemd_eemd_func_get_acf1_get_k_noise_t1_smooth1"
 date_range<-"2015-02-01/"
@@ -138,78 +135,10 @@ backtest_func<-function(date_range,xxx){
     #            tradeStats(Portfolio = q.strategy, Symbol = "ZSYH")))
   },xxx,date_range)
   
-}  
-  
+} 
 
+backtest_2009_07_01_2014_07_01<-backtest_func("2009-07-01/2014-07-01",xxx)
+backtest_2014_07_01<-backtest_func("2014-07-01/",xxx)
 
-library(quantstrat)
-# 金融产品初始化
-currency("RMB")
-q.strategy <- "qFaber"
-try(rm("order_book.qFaber",pos=.strategy),silent=TRUE)
-try(rm("account.qFaber","portfolio.qFaber",pos=.blotter),silent=TRUE)
-## [1] "RMB"
-stock("ZSYH", currency = "RMB", multiplier = 1)
-## [1] "ZSYH"
-# 设定时区
-Sys.setenv(TZ = "GMT+8")
-ZSYH<-pred_close_price
-# 初始化组合和账户
-q.strategy <- "qFaber"
-initPortf(q.strategy, "ZSYH", initDate = "2002-01-31")
-## [1] "qFaber"
-initAcct(q.strategy, portfolios = q.strategy, initDate = "2002-01-31", initEq = 100000)
-## [1] "qFaber"
-# 初始化指定和策略
-initOrders(portfolio = q.strategy, initDate = "2002-01-31")
-strategy(q.strategy, store = TRUE)
-
-add.signal(q.strategy,name="sigThreshold",
-           arguments = list(column="buy_signal",
-                            relationship="eq",
-                            threshold=1,
-                            cross=TRUE),
-           label="buy_signal_add"
-)
-
-add.signal(q.strategy,name="sigThreshold",
-           arguments = list(column="sell_signal",
-                            relationship="eq",
-                            threshold=1),
-           label="sell_signal_add"
-)
-
-
-add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "buy_signal_add", 
-                                                           sigval = TRUE, orderqty = 50000, ordertype = "market", orderside = "long", 
-                                                           pricemethod = "market"), type = "enter", path.dep = TRUE) # 买入数量为900股
-
-add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "sell_signal_add", 
-                                                           sigval = TRUE, orderqty = "all", ordertype = "market", orderside = "long", 
-                                                           pricemethod = "market"), type = "exit", path.dep = TRUE)
-
-
-applyStrategy(strategy = q.strategy, portfolios = q.strategy)
-
-
-updatePortf(q.strategy)
-
-updateAcct(q.strategy)
-
-updateEndEq(q.strategy)
-
-myTheme <- chart_theme()
-myTheme$col$dn.col <- "lightgreen"
-myTheme$col$up.col <- "lightblue"
-myTheme$col$dn.border <- "grey"
-myTheme$col$up.border <- "grey"
-
-chart.Posn(q.strategy, Symbol = "ZSYH", Dates = paste('2008-01-01/','2015-01-30',sep=''), theme=myTheme)
-(tstats <- tradeStats(Portfolio = q.strategy, Symbol = "ZSYH"))
-
-
-ob <- getOrderBook(q.strategy)
-head(ob$qFaber$ZSYH)
-
-chart.ME(Portfolio = q.strategy, Symbol = "ZSYH", type = "MAE", scale = "percent")
-chart.ME(Portfolio = q.strategy, Symbol = "ZSYH", type = "MFE", scale = "percent")
+write.csv(backtest_2009_07_01_2014_07_01, file = "~/temp/backtest_2009_07_01_2014_07_01.txt",row.names=F)
+write.csv(backtest_01_2014_07_01, file = "~/temp/backtest_2014_07_01.txt",row.names=F)

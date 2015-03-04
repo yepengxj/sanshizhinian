@@ -4,6 +4,8 @@ library(dtw)
 library(plyr)
 library("e1071")
 library("kernlab")
+library("GA")
+
 
 
 
@@ -173,7 +175,7 @@ factor_col<-c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
 prd_col<-c("ema3_next5day_roc")
 
 
-pred_result<-aaply(as.numeric(.indexDate(HS300_idx_ts["2015-02-02/2015-02-03",])), 1, 
+pred_result<-aaply(as.numeric(.indexDate(HS300_idx_ts["2007-01-01/2015-02-03",])), 1, 
                    function(x,ts,factor_col,prd_col){
                      
                      end_date_id<-which(.indexDate(ts)==x)
@@ -186,6 +188,6 @@ pred_result<-aaply(as.numeric(.indexDate(HS300_idx_ts["2015-02-02/2015-02-03",])
                      
                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col)
                      
-                   },HS300_idx_ts["2014-01-01/",],factor_col,prd_col)
+                   },HS300_idx_ts["2000-01-01/",],factor_col,prd_col)
 
 write.csv(pred_result, file = "~/temp/kpca_svm_pred_result.txt",row.names=F)

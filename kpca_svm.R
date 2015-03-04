@@ -69,7 +69,6 @@ HS300_idx_ts$log2high_low5<-sqrt(runSum(log2(HS300_idx_ts[,"high"]/HS300_idx_ts[
 
 HS300_idx_ts_kpca<-kpca(as.matrix(HS300_idx_ts[,c(-1,-2,-3,-4,-5)]),kernel="rbfdot")
 
-head()
 ##SVM
 kernel_type <- "radial"
 max_gamma <- -2
@@ -77,33 +76,87 @@ min_gamma <- -6
 max_cost <- 3
 min_cost <- -6
 
-tuned <- tune.svm(survival_days ~ ., data = train_set,
-                  kernel = kernel_type,
-                  gamma = 10^(min_gamma:max_gamma),
-                  cost = 10^(min_cost:max_cost))
-tuned<-tune.svm(HS300_idx_ts["2015-01-15/2015-02-06",
-           c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
-             "ema15_last3day_close", "ema10_close", "ema20_close","ema3_close",
+
+factor_col<-c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
+              "ema15_last3day_close", "ema10_close", "ema20_close","ema3_close",
               "roc5_close", "roc5_last1day_close", "roc5_last2day_close",
-             "roc5_last3day_close", "roc5_last4day_close", "roc10_close", "roc10_last1day_close", 
-             "roc10_last2day_close", "roc10_last3day_close", "roc10_last4day_close", "roc15_close", 
-             "roc15_last1day_close", "roc15_last2day_close", "roc15_last3day_close", "roc15_last4day_close", 
-             "roc20_close", "roc20_last1day_close", "roc20_last2day_close", "roc20_last3day_close", 
-             "roc20_last4day_close", "obv", "log2high_low5")],
-           HS300_idx_ts["2015-01-15/2015-02-06", "ema3_next5day_roc"],
-           kernel_type="radial",
-           gamma = 10^(min_gamma:max_gamma),
-           cost = 10^(min_cost:max_cost))
-               
-predict_data<-predict(svm_model, HS300_idx_ts["2015-02-09",
-                                c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
-                                  "ema15_last3day_close", "ema10_close", "ema20_close","ema3_close",
-                                  "roc5_close", "roc5_last1day_close", "roc5_last2day_close",
-                                  "roc5_last3day_close", "roc5_last4day_close", "roc10_close", "roc10_last1day_close", 
-                                  "roc10_last2day_close", "roc10_last3day_close", "roc10_last4day_close", "roc15_close", 
-                                  "roc15_last1day_close", "roc15_last2day_close", "roc15_last3day_close", "roc15_last4day_close", 
-                                  "roc20_close", "roc20_last1day_close", "roc20_last2day_close", "roc20_last3day_close", 
-                                  "roc20_last4day_close", "obv", "log2high_low5")])
+              "roc5_last3day_close", "roc5_last4day_close", "roc10_close", "roc10_last1day_close", 
+              "roc10_last2day_close", "roc10_last3day_close", "roc10_last4day_close", "roc15_close", 
+              "roc15_last1day_close", "roc15_last2day_close", "roc15_last3day_close", "roc15_last4day_close", 
+              "roc20_close", "roc20_last1day_close", "roc20_last2day_close", "roc20_last3day_close", 
+              "roc20_last4day_close", "obv", "log2high_low5")
+
+prd_col<-c("ema3_next5day_roc")
+
+
+pred_result<-adply(as.numeric(.indexDate(HS300_idx_ts["2015-02-02/2015-02-03",])), 1, 
+                   function(x,ts,factor_col,prd_col){
+                     
+                     end_date_id<-which(.indexDate(ts)==x)
+                     start_date<-.indexDate(ts)[(end_date_id-40)]
+                     
+                     start_end_str<-paste(as.Date(start_date,format="%Y-%m-%d",origin = "1970-01-01"),
+                                          "/",
+                                          as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
+                                          sep="")
+                     
+                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col)
+                     
+                   },HS300_idx_ts["2014-01-01/",],factor_col,prd_col)
+
+
+kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col)
+{
+  
+  model_data<-as.matrix(ts[,c(factor_col,prd_col)])
+  
+  #model_data_normalize<-cbind(t(aaply(model_data[,normalize_col],2,normalize_func)),model_data[,non_normalize_col] )
+  model_data_normalize<-t(aaply(model_data,2,normalize_func))
+  model_data_normalize_kpca<-pcv(kpca(~.,data=data.frame(model_data_normalize[,factor_col]),kernel="rbfdot",
+                                      kpar=list(sigma=0.2),features=2))
+  #train_set<-as.integer(nrow(model_data_normalize)*0.9)
+  train_set<-nrow(model_data_normalize_kpca)-2
+  training<-model_data_normalize_kpca[1:train_set,]
+  trainingTarget<-model_data_normalize[1:train_set,prd_col]
+  
+  
+  testing<-model_data_normalize_kpca[(train_set:nrow(model_data_normalize_kpca)),]
+  testingTarget<-model_data_normalize[(train_set:nrow(model_data_normalize)),prd_col]
+  
+  
+  
+  svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
+    #建立SVM
+    svm_model<-svm(x=training,y=trainingTarget,cost=x[1],gamma=x[2])
+    
+    #做预测
+    pred<-predict(svm_model,testing)
+    
+    #calc_fitness(MSE)
+    -sqrt(sum((testingTarget-pred)^2))/length(testingTarget)
+    
+  }
+  
+  GA <- ga(type = "real-valued",
+           fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
+           min = c(0, 0), max = c(100, 100), popSize = 50,
+           maxiter = 50)
+  
+  svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
+  
+  predict_data<-predict(svm_model,testing)
+  
+  df_temp<-data.frame(c( as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
+                         as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col]))))
+                      )
+
+  df_temp[nrow(df_temp)+1,]<-date_range
+
+  colnames(df_temp)<-NULL
+  rownames(df_temp)<-NULL
+  print(df_temp)
+  df_temp
+}
 
 
 xts_shitf_days<-function(xts_data,shitf_days)
@@ -146,129 +199,3 @@ denormalize_func<-function(x,max_x,min_x)
   (x-1)*(max_x-min_x)+min_x
 }
 
-# Decompose with EEMD
-imfs <- Rlibeemd::eemd(normalize_func(xxx$close), num_siftings = 1000, ensemble_size = 100, threads = 2)
-head(imfs,10)
-plot(imfs[,c(1:5)])
-plot(imfs[,c(6:11)])
-# High frequencies
-ts.plot(rowSums(imfs[,1:3]))
-# Low frequencies
-ts.plot(rowSums(imfs[,4:ncol(imfs)]))
-
-test<-HS300_idx_ts["2006-01-01/","close_emd_smooth"]
-test[!is.na(test[,1]),]
-testdata<-close_emd_smooth_ts
-
-testdata<-SMA(xxx[,"close"],5)
-testdata<-testdata[!is.na(testdata)]
-
-plot(testdata["2014-01-01/2015-01-30",1],ylim=c(min(testdata["2014-01-01/2015-01-30",1],na.rm=T),max(testdata["2014-01-01/2015-01-30",1],na.rm=T)))
-
-which(.indexDate(testdata["2011-01-01/2015-01-30",1])==16085)
-result_data_emd<-result_data
-
-result_data_sma<-aaply(as.numeric(.indexDate(testdata["2011-01-01/2015-01-19",1])), 1, 
-function(x,ts,i,j){
-  start_date_id<-which(.indexDate(ts)==x)
-  end_date<-.indexDate(ts)[(start_date_id+i-1)]
-  if(!is.na(end_date))
-  {
-    start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
-                         "/",
-                         as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
-                         sep="")
-    start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-    print(start_end_str)
-    print(start_str)
-    ac_indicator(ts[start_end_str],ts[start_str],i,j)
-  }
-  
-  },testdata[,1],10,3)
-
-
-
-xxx_close_normalize<-(xxx[,"close"]-min(xxx[,"close"]))/(max(xxx[,"close"])-min(xxx[,"close"]))+1
-eemd_test<-Rlibeemd::eemd(xxx_close_normalize)
-
-xxx_sma_5<-SMA(xxx[,"close"],5)
-xxx_sma_5<-xxx_sma_5[!is.na(xxx_sma_5)]
-normalize_func(xxx_sma_5,max_sma5,min_sma5)
-xxx_sma_5_normalize<-(xxx_sma_5-min(xxx_sma_5))/(max(xxx_sma_5)-min(xxx_sma_5))+1
-xxx_sma_5_normalize<-cbind(Rlibeemd::eemd(xxx_sma_5_normalize),xxx_sma_5_normalize)
-xxx_sma_5_normalize_xts<-xts(xxx_sma_5_normalize,order.by=as.Date(.indexDate(xxx_sma_5)))  
-
-
-xxx_close<-cbind(xxx_close_normalize,Rlibeemd::eemd(xxx_close_normalize))
-xxx_close_xts<-xts(xxx_close,order.by=as.Date(.indexDate(xxx)))  
-
-
-result_data_eemd2<-aaply(as.numeric(.indexDate(xxx_close_xts["2014-01-01/2015-01-19",3])), 1, 
-function(x,ts,i,j){
-
-  start_date_id<-which(.indexDate(ts)==x)
-  end_date<-.indexDate(ts)[(start_date_id+i-1)]
-  if(!is.na(end_date))
-  {
-    start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
-                         "/",
-                         as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
-                         sep="")
-    start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-    print(start_end_str)
-    print(start_str)
-    ac_indicator(ts[start_end_str],ts[start_str],i,j)
-  }
-  
-},xxx_close_xts[,3],10,3)
-
-result_data<-ac_indicator(xxx_close_xts["2011-01-10/2015-01-30"],xxx_close_xts["/2011-01-01"],10,3)
-
-plot_data<-cbind(xxx["2011-01-17/2015-01-30","close"],result_data_emd)
-plot_data<-merge(testdata["2011-01-01/2011-01-30"],result_data,join="left")
-plot_data<-result_data[,c(1,6,7,8)]
-
-plot(plot_data["2014-10-17/2015-01-30",1],ylim=c(min(plot_data["2014-01-17/2015-01-30"],na.rm=T),max(plot_data["2014-01-17/2015-01-30"],na.rm=T)))
-lines(plot_data["2014-10-17/2015-01-30",2],col="red")
-lines(plot_data["2014-10-17/2015-01-30",3],col="blue")
-lines(plot_data["2014-10-17/2015-01-30",4],col="yellow")
-
-
-
-pred_close_price<-HS300_idx_ts["2008-01-15/2015-01-30"]
-pred_close_price$sell_signal<-((result_data_hs300_eemd_smooth[,1]>result_data_hs300_eemd_smooth[,2])&(result_data_hs300_eemd_smooth[,2]>result_data_hs300_eemd_smooth[,3]))
-pred_close_price$buy_signal<-((result_data_hs300_eemd_smooth[,1]<result_data_hs300_eemd_smooth[,2])&(result_data_hs300_eemd_smooth[,2]<result_data_hs300_eemd_smooth[,3]))
-pred_close_price$close<-pred_close_price$close/1000
-pred_close_price$high<-pred_close_price$high/1000
-pred_close_price$low<-pred_close_price$low/1000
-pred_close_price$open<-pred_close_price$open/1000
-
-
-result_data1<-plot_data[,(1:4)]
-result_data1$sell_signal<-((result_data1[,2]>result_data1[,3])&(result_data1[,3]>result_data1[,4]))
-
-result_data1$buy_signal<-((result_data1[,2]<result_data1[,3])&(result_data1[,3]<result_data1[,4]))
-
-chuquan<-as.Date(c("2014-06-10","2013-06-18",'2012-10-17'),format="%Y-%m-%d",origin = "1970-01-01")
-is_chuquan<-rep(1,length(chuquan))
-chuquan_ts<-xts(is_chuquan,order.by=chuquan)
-colnames(chuquan_ts)<-"chuquan"
-
-result_data1$sma<-SMA(result_data1[,"close"],5)
-result_data1$bias<-(result_data1[,"close"]-result_data1[,"sma"])/result_data1[,"sma"]*100
-result_data1<-merge(xxx["2011-01-17/2015-01-30"],sell_signal,join="left")
-result_data1<-merge(result_data1["2011-01-17/"],buy_signal,join="left")
-result_data1<-merge(result_data1["2011-01-17/"],chuquan_ts,join="left")
-result_data1$chuquan[is.na(result_data1$chuquan)]<-0
-result_data1<-result_data1[!result_data1$close==0]
-
-result_data1$buy_signal<-(result_data1$buy_signal==1)&(result_data1$bias < -3)
-
-
-1] "2012-01-11 00:00:00 ZSYH 9000 @ 0"
-[1] "2012-01-12 00:00:00 ZSYH -9000 @ 0"
-[1] "2012-01-17 00:00:00 ZSYH 9000 @ 0"
-
-
-result_data1["2012-01-11/2012-01-17"]
-xxx[!xxx$close==0]

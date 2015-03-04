@@ -3,14 +3,16 @@ library(quantstrat)
 library(dtw)
 library(plyr)
 library("e1071")
-library("hht")
 
-setwd("~/temp/")
-print(getwd())
 xxx<-read.csv("~/temp/0000300.csv",header=F,skip=1,encoding = "UTF-8")
 xxx<-xts(xxx[,c(4,5,6,7,12)],order.by=as.Date(xxx[,1],"%Y-%m-%d"))
 colnames(xxx)<-c("close","high","low","open","vol")
-q.strategy <- "qFaber"
+
+
+date_range<-"2009-07-01/2014-07-01"
+x<-"pred_resRlibeemd_eemd_func_get_acf1_get_k1_noise_t_smooth"
+
+
 backtest_func<-function(date_range,xxx){
   
   aaply(list.files("~/temp/",pattern="^pred_resRlibeemd_eemd"),1,function(x,xxx,date_range){
@@ -37,7 +39,7 @@ backtest_func<-function(date_range,xxx){
     # 设定时区
     Sys.setenv(TZ = "GMT+8")
     ZSYH<-pred_close_price
-    print(head(ZSYH,4))
+    assign("ZSYH", ZSYH, envir=.GlobalEnv)
     # 初始化组合和账户
     q.strategy <- "qFaber"
     initPortf(q.strategy, "ZSYH", initDate = "2002-01-31")
@@ -55,7 +57,6 @@ backtest_func<-function(date_range,xxx){
                                 cross=TRUE),
                label="buy_signal_add"
     )
-    print("add.signal")
     
     add.signal(q.strategy,name="sigThreshold",
                arguments = list(column="sell_signal",
@@ -64,7 +65,6 @@ backtest_func<-function(date_range,xxx){
                label="sell_signal_add"
     )
     
-    print("add.signal")
     
     add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "buy_signal_add", 
                                                                sigval = TRUE, orderqty = 50000, ordertype = "market", orderside = "long", 
@@ -74,17 +74,18 @@ backtest_func<-function(date_range,xxx){
                                                                sigval = TRUE, orderqty = "all", ordertype = "market", orderside = "long", 
                                                                pricemethod = "market"), type = "exit", path.dep = TRUE)
 
-    print("add.rul")
     
     applyStrategy(strategy = q.strategy, portfolios = q.strategy,mktdata=pred_close_price)
     
+    print("applyStrategy")
     
-    updatePortf(q.strategy)
+    updatePortf(q.strategy , Symbols="ZSYH")
+    print("updatePortf")
     
     updateAcct(q.strategy)
-    
+    print("updateAcct")
     updateEndEq(q.strategy)
-    
+    print("updateEndEq")
     myTheme <- chart_theme()
     myTheme$col$dn.col <- "lightgreen"
     myTheme$col$up.col <- "lightblue"

@@ -7,112 +7,14 @@ library("hht")
 library("kernlab")
 
 #####准备数据from tdx
-HS300_fund<-read.table('~/Downloads/SZ159919.txt',header=F,sep="\t",skip = 2,fill=T)
-HS300_fund<-HS300_fund[-nrow(HS300_fund),]
-HS300_fund_ts<-xts(HS300_fund[,-1],order.by=as.Date(HS300_fund[,1],format="%m/%d/%Y",origin = "1970-01-01"))
-colnames(HS300_fund_ts)<-c("open","high","low","close","vol","amount")
+hs300_idx<-read.csv("~/temp/0000300.csv",header=F,skip=1,encoding = "UTF-8")
 
-HS300_idx<-read.table('~/Downloads/SZ399300.txt',header=F,sep="\t",skip = 2,fill=T)
-HS300_idx<-HS300_idx[-nrow(HS300_idx),]
-HS300_idx_ts<-xts(HS300_idx[,-1],order.by=as.Date(HS300_idx[,1],format="%m/%d/%Y",origin = "1970-01-01"))
-colnames(HS300_idx_ts)<-c("open","high","low","close","vol","amount")
+HS300_idx_ts<-xts(hs300_idx[,c(4,5,6,7,12)],order.by=as.Date(hs300_idx[,1],"%Y-%m-%d"))
 
 
+colnames(HS300_idx_ts)<-c("close","high","low","open","vol")
+HS300_idx_ts<-HS300_idx_ts[!HS300_idx_ts$close==0]
 
-####sma5降噪
-HS300_idx_ts$sma5_close<-SMA(HS300_idx_ts[,"close"],5)
-
-#ac预测
-result_data_hs300_sma5_smooth<-aaply(as.numeric(.indexDate(HS300_idx_ts["2011-01-01/2015-01-19","sma5_close"])), 1, 
-                                    function(x,ts,i,j){
-                                      start_date_id<-which(.indexDate(ts)==x)
-                                      end_date<-.indexDate(ts)[(start_date_id+i-1)]
-                                      if(!is.na(end_date))
-                                      {
-                                        start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
-                                                             "/",
-                                                             as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
-                                                             sep="")
-                                        start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-                                        print(start_end_str)
-                                        print(start_str)
-                                        ac_indicator(ts[start_end_str],ts[start_str],i,j)
-                                      }
-                                      
-                                    },HS300_idx_ts["2006-01-01/","sma5_close"],10,3)
-
-
-####ema5降噪
-HS300_idx_ts$ema5_close<-EMA(HS300_idx_ts[,"close"],5)
-
-result_data_hs300_ema5_smooth<-aaply(as.numeric(.indexDate(HS300_idx_ts["2011-01-01/2015-01-19","ema5_close"])), 1, 
-                                     function(x,ts,i,j){
-                                       start_date_id<-which(.indexDate(ts)==x)
-                                       end_date<-.indexDate(ts)[(start_date_id+i-1)]
-                                       if(!is.na(end_date))
-                                       {
-                                         start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
-                                                              "/",
-                                                              as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
-                                                              sep="")
-                                         start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-                                         print(start_end_str)
-                                         print(start_str)
-                                         ac_indicator(ts[start_end_str],ts[start_str],i,j)
-                                       }
-                                       
-                                     },HS300_idx_ts["2006-01-01/","ema5_close"],10,3)
-
-#####emd降噪
-HS300_idx_ts$close_emd_smooth<-emd_smooth(as.numeric(HS300_idx_ts[,"close"]))
-
-#ac预测   2009-01-16/2015-01-30
-result_data_hs300_emd_smooth<-aaply(as.numeric(.indexDate(HS300_idx_ts["2009-01-01/2015-01-19","close"])), 1, 
-                       function(x,ts,i,j){
-                         start_date_id<-which(.indexDate(ts)==x)
-                         end_date<-.indexDate(ts)[(start_date_id+i-1)]
-                         start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
-                                              "/",
-                                              as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
-                                              sep="")
-                         start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-                         end_str<-paste("/",as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-                         #print(start_end_str)
-                         #print(start_str)
-                         #print(end_str)
-                         ts_curr<-ts[end_str]
-                         ts_curr$emd_smmoth<-emd_smooth(as.numeric(ts[end_str]))
-                         ac_indicator(ts_curr[start_end_str,"emd_smmoth"],ts_curr[start_str,"emd_smmoth"],i,j)
-                         
-                       },HS300_idx_ts["2006-01-01/","close"],10,3)
-
-#####EEMD降噪
-HS300_idx_ts$close_eemd_smooth<-eemd_smooth(as.numeric(HS300_idx_ts[,"close"]))
-
-#ac预测2009-02-06  2008-01-15/2015-01-30
-result_data_hs300_eemd_smooth<-aaply(as.numeric(.indexDate(HS300_idx_ts["2008-01-01/2015-01-19","close"])), 1, 
-                                    function(x,ts,i,j){
-                                      start_date_id<-which(.indexDate(ts)==x)
-                                      end_date<-.indexDate(ts)[(start_date_id+i-1)]
-                                      if(!is.na(end_date))
-                                      {
-                                        start_end_str<-paste(as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
-                                                             "/",
-                                                             as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),
-                                                             sep="")
-                                        start_str<-paste("/",as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-                                        end_str<-paste("/",as.Date(end_date,format="%Y-%m-%d",origin = "1970-01-01"),sep="")
-                                        #print(start_end_str)
-                                        #print(start_str)
-                                        #print(end_str)
-                                        ts_curr<-ts[end_str]
-                                        ts_curr$eemd_smmoth<-eemd_smooth(as.numeric(ts[end_str]))
-                                        ac_indicator(ts_curr[start_end_str,"eemd_smmoth"],ts_curr[start_str,"eemd_smmoth"],i,j)
-                                      }
-                                      
-                                    },HS300_idx_ts["2000-01-01/","close"],10,3)
-
-pred_result_ts<-as.xts(result_data_hs300_eemd_smooth,order.by=time(HS300_idx_ts["2009-02-06/2015-02-16"]))
 #####SVR
 ###ema15降噪
 HS300_idx_ts$ema15_close<-EMA(HS300_idx_ts[,"close"],15)
@@ -165,7 +67,9 @@ HS300_idx_ts$obv<-OBV(HS300_idx_ts[,"close"],HS300_idx_ts[,"vol"])
 ##log2high_low
 HS300_idx_ts$log2high_low5<-sqrt(runSum(log2(HS300_idx_ts[,"high"]/HS300_idx_ts[,"low"]),5)/5)*80
 
+HS300_idx_ts_kpca<-kpca(as.matrix(HS300_idx_ts[,c(-1,-2,-3,-4,-5)]),kernel="rbfdot")
 
+head()
 ##SVM
 kernel_type <- "radial"
 max_gamma <- -2

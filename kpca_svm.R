@@ -89,7 +89,7 @@ factor_col<-c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
 prd_col<-c("ema3_next5day_roc")
 
 
-pred_result<-adply(as.numeric(.indexDate(HS300_idx_ts["2015-02-02/2015-02-03",])), 1, 
+pred_result<-aaply(as.numeric(.indexDate(HS300_idx_ts["2015-02-02/2015-02-03",])), 1, 
                    function(x,ts,factor_col,prd_col){
                      
                      end_date_id<-which(.indexDate(ts)==x)
@@ -146,16 +146,11 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col)
   
   predict_data<-predict(svm_model,testing)
   
-  df_temp<-data.frame(c( as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
-                         as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col]))))
-                      )
+  c( as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
+     as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col]))),
+     date_range)
 
-  df_temp[nrow(df_temp)+1,]<-date_range
 
-  colnames(df_temp)<-NULL
-  rownames(df_temp)<-NULL
-  print(df_temp)
-  df_temp
 }
 
 

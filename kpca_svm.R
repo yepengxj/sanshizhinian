@@ -63,7 +63,7 @@ svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
   
 }
 
-kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col)
+kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
 {
   
   model_data<-as.matrix(ts[,c(factor_col,prd_col)])
@@ -73,7 +73,7 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col)
   model_data_normalize_kpca<-pcv(kpca(~.,data=data.frame(model_data_normalize[,factor_col]),kernel="rbfdot",
                                       kpar=list(sigma=0.2),features=2))
   #train_set<-as.integer(nrow(model_data_normalize)*0.9)
-  train_set<-nrow(model_data_normalize_kpca)-2
+  train_set<-nrow(model_data_normalize_kpca)-pred_range
   training<-model_data_normalize_kpca[1:train_set,]
   trainingTarget<-model_data_normalize[1:train_set,prd_col]
   
@@ -93,9 +93,7 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col)
   c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
     as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
     as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col])))
-  )
-  
-  
+  ) 
 }
 
 #####准备数据from tdx
@@ -118,9 +116,20 @@ HS300_idx_ts$ema15_last3day_close<-xts_shitf_days(HS300_idx_ts[,"ema15_close"],-
 HS300_idx_ts$ema10_close<-EMA(HS300_idx_ts[,"close"],10)
 HS300_idx_ts$ema20_close<-EMA(HS300_idx_ts[,"close"],20)
 HS300_idx_ts$ema3_close<-EMA(HS300_idx_ts[,"close"],3)
+HS300_idx_ts$ema3_next1day_close<-xts_shitf_days(HS300_idx_ts[,"ema3_close"],1)
+HS300_idx_ts$ema3_next1day_roc<-(HS300_idx_ts[,"ema3_next1day_close"]-HS300_idx_ts[,"ema3_close"])/HS300_idx_ts[,"ema3_close"]
+
+HS300_idx_ts$ema3_next2day_close<-xts_shitf_days(HS300_idx_ts[,"ema3_close"],2)
+HS300_idx_ts$ema3_next2day_roc<-(HS300_idx_ts[,"ema3_next2day_close"]-HS300_idx_ts[,"ema3_close"])/HS300_idx_ts[,"ema3_close"]
+
+HS300_idx_ts$ema3_next3day_close<-xts_shitf_days(HS300_idx_ts[,"ema3_close"],3)
+HS300_idx_ts$ema3_next3day_roc<-(HS300_idx_ts[,"ema3_next3day_close"]-HS300_idx_ts[,"ema3_close"])/HS300_idx_ts[,"ema3_close"]
+
 HS300_idx_ts$ema3_next5day_close<-xts_shitf_days(HS300_idx_ts[,"ema3_close"],5)
 HS300_idx_ts$ema3_next5day_roc<-(HS300_idx_ts[,"ema3_next5day_close"]-HS300_idx_ts[,"ema3_close"])/HS300_idx_ts[,"ema3_close"]
 
+HS300_idx_ts$ema3_next6day_close<-xts_shitf_days(HS300_idx_ts[,"ema3_close"],6)
+HS300_idx_ts$ema3_next6day_roc<-(HS300_idx_ts[,"ema3_next6day_close"]-HS300_idx_ts[,"ema3_close"])/HS300_idx_ts[,"ema3_close"]
 
 
 ###5日收益率
@@ -159,8 +168,6 @@ HS300_idx_ts$obv<-OBV(HS300_idx_ts[,"close"],HS300_idx_ts[,"vol"])
 ##log2high_low
 HS300_idx_ts$log2high_low5<-sqrt(runSum(log2(HS300_idx_ts[,"high"]/HS300_idx_ts[,"low"]),5)/5)*80
 
-HS300_idx_ts_kpca<-kpca(as.matrix(HS300_idx_ts[,c(-1,-2,-3,-4,-5)]),kernel="rbfdot")
-
 ##SVM
 
 factor_col<-c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
@@ -172,10 +179,10 @@ factor_col<-c("ema15_close", "ema15_last1day_close","ema15_last2day_close",
               "roc20_close", "roc20_last1day_close", "roc20_last2day_close", "roc20_last3day_close", 
               "roc20_last4day_close", "obv", "log2high_low5")
 
-prd_col<-c("ema3_next5day_roc")
+prd_col<-c("ema3_next1day_roc","ema3_next2day_roc","ema3_next3day_roc")
 
 
-pred_result<-aaply(as.numeric(.indexDate(HS300_idx_ts["2007-01-01/2015-02-03",])), 1, 
+pred_result1<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",])), 1, 
                    function(x,ts,factor_col,prd_col){
                      
                      end_date_id<-which(.indexDate(ts)==x)
@@ -186,8 +193,42 @@ pred_result<-aaply(as.numeric(.indexDate(HS300_idx_ts["2007-01-01/2015-02-03",])
                                           as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
                                           sep="")
                      
-                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col)
+                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,1)
                      
-                   },HS300_idx_ts["2000-01-01/",],factor_col,prd_col)
+                   },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next1day_roc")
 
-write.csv(pred_result, file = "~/temp/kpca_svm_pred_result.txt",row.names=F)
+write.csv(pred_result1, file = "~/temp/kpca_svm_pred_result1.txt",row.names=F)
+
+pred_result2<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",])), 1, 
+                    function(x,ts,factor_col,prd_col){
+                      
+                      end_date_id<-which(.indexDate(ts)==x)
+                      start_date<-.indexDate(ts)[(end_date_id-40)]
+                      
+                      start_end_str<-paste(as.Date(start_date,format="%Y-%m-%d",origin = "1970-01-01"),
+                                           "/",
+                                           as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
+                                           sep="")
+                      
+                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,1)
+                      
+                    },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next2day_roc")
+
+write.csv(pred_result2, file = "~/temp/kpca_svm_pred_result2.txt",row.names=F)
+
+pred_result3<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",])), 1, 
+                    function(x,ts,factor_col,prd_col){
+                      
+                      end_date_id<-which(.indexDate(ts)==x)
+                      start_date<-.indexDate(ts)[(end_date_id-40)]
+                      
+                      start_end_str<-paste(as.Date(start_date,format="%Y-%m-%d",origin = "1970-01-01"),
+                                           "/",
+                                           as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
+                                           sep="")
+                      
+                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,1)
+                      
+                    },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next3day_roc")
+
+write.csv(pred_result3, file = "~/temp/kpca_svm_pred_result3.txt",row.names=F)

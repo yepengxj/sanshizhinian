@@ -62,7 +62,10 @@ svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
   -sqrt(sum((testingTarget-pred)^2))/length(testingTarget)
   
 }
-
+ts<-HS300_idx_ts["2014-01-01/2015-02-03",]
+date_range<-"2014-01-01/2015-02-03"
+pred_range<-2
+prd_col<-"ema3_next2day_roc"
 kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
 {
   
@@ -78,8 +81,8 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
   trainingTarget<-model_data_normalize[1:train_set,prd_col]
   
   
-  testing<-model_data_normalize_kpca[(train_set:nrow(model_data_normalize_kpca)),]
-  testingTarget<-model_data_normalize[(train_set:nrow(model_data_normalize)),prd_col]
+  testing<-matrix(model_data_normalize_kpca[(train_set:nrow(model_data_normalize_kpca)),],ncol=dim(model_data_normalize_kpca)[2])
+  testingTarget<-matrix(model_data_normalize[(train_set:nrow(model_data_normalize)),prd_col],ncol=length(prd_col))
   
   GA <- ga(type = "real-valued",
            fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
@@ -193,7 +196,7 @@ pred_result1<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",]
                                           as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
                                           sep="")
                      
-                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,1)
+                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,0)
                      
                    },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next1day_roc")
 
@@ -210,7 +213,7 @@ pred_result2<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",]
                                            as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
                                            sep="")
                       
-                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,1)
+                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,0)
                       
                     },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next2day_roc")
 
@@ -227,7 +230,7 @@ pred_result3<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",]
                                            as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
                                            sep="")
                       
-                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,1)
+                      kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,0)
                       
                     },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next3day_roc")
 

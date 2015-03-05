@@ -62,10 +62,8 @@ svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
   -sqrt(sum((testingTarget-pred)^2))/length(testingTarget)
   
 }
-ts<-HS300_idx_ts["2014-01-01/2015-02-03",]
-date_range<-"2014-01-01/2015-02-03"
-pred_range<-2
-prd_col<-"ema3_next2day_roc"
+
+
 kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
 {
   

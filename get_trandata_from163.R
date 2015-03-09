@@ -195,7 +195,7 @@ for(eemd_l in (eemd_list))
                                },curr_xxx["2000-01-01/","close"],10,3)
             
             
-            file_name<-paste(eemd_l$func_name,acf_l$func_name,get_k_l$func_name,noise_t_l$func_name,smooth_l$func_name,sep="_")
+            file_name<-paste(eemd_l$func_name,acf_l$func_name,get_k_l$func_name,noise_t_l$func_name,smooth_l$func_name,datarange_l,sep="_")
             file_path<-paste("~/temp/","smooth_res",file_name,sep="")
             write.csv(curr_xxx$smooth_close, file = file_path,row.names=F)
             

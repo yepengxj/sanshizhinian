@@ -152,7 +152,7 @@ for(eemd_l in (eemd_list)){
                        },curr_xxx["2000-01-01/","close"],10,3)
     
     
-    file_name<-paste(eemd_l$func_name,acf_l$func_name,datarange_l,sep="_")
+    file_name<-paste(eemd_l$func_name,datarange_l,sep="_")
 
     file_path<-paste("~/temp/","pred_res",file_name,sep="")
     

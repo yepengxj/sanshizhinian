@@ -1,8 +1,15 @@
 source("./ems_smooth.R")
 
 
-library(XML)
 library(plyr)
+library(EMD)
+library(Rlibeemd)
+library(XML)
+library(quantstrat)
+library(dtw)
+library(dtw)
+library(psych)
+
 
 tickers<-"0000300"
 path<-"~/temp"
@@ -109,7 +116,7 @@ datarange_list<-c("2006-01-01/2008-01-01","2008-01-01/2009-01-01","2006-01-01/20
 for(eemd_l in (eemd_list)){
   for(datarange_l in datarange_list)
   {
-
+    curr_xxx<-xxx
     pred_result<-aaply(as.numeric(.indexDate(curr_xxx[datarange_l,"close"])), 1, 
                        function(x,ts,i,j){
                          start_date_id<-which(.indexDate(ts)==x)

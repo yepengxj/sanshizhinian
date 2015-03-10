@@ -5,6 +5,7 @@ library(plyr)
 library("e1071")
 library("kernlab")
 library("GA")
+library(psych)
 
 
 
@@ -96,6 +97,52 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
     as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col])))
   ) 
 }
+
+
+date_range<-"2007-07-01/2008-01-01"
+ts<-HS300_idx_ts[date_range]
+factor_col<-"close"
+prd_col<-"ema3_next1day_roc"
+eemd_l<-  list(func_name="Rlibeemd_eemd_func",func=Rlibeemd_eemd_func)
+pred_range<-0
+pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_range)
+{
+  curr_ts<-ts[,factor_col]
+  data_eemd<-eemd_l$func(as.numeric(curr_ts[,factor_col]))
+  
+  print(data_eemd$nimf)
+  eemd_pcv<-principal(data_eemd$imf,nfactors=(data_eemd$nimf),rotate="none")
+  t<-max(which(eemd_pcv$values>0.85))
+  print(t)
+  dim(data_eemd$imf)
+  eemd_pcv_denoise<-data_eemd$imf%*%eemd_pcv$loadings[,(1:t)]
+
+  
+  train_data<-as.matrix(ts[,prd_col])
+  
+  train_set<-nrow(train_data)-pred_range
+  training<-eemd_pcv_denoise[1:train_set,]
+  trainingTarget<-train_data[1:train_set,prd_col]
+  
+  
+  testing<-matrix(eemd_pcv_denoise[(train_set:nrow(eemd_pcv_denoise)),],ncol=dim(eemd_pcv_denoise)[2])
+  testingTarget<-matrix(train_data[(train_set:nrow(train_data)),prd_col],ncol=length(prd_col))
+  
+  GA <- ga(type = "real-valued",
+           fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
+           min = c(0, 0), max = c(100, 100), popSize = 50,
+           maxiter = 50)
+  
+  svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
+  print("svm_model")
+  predict_data<-predict(svm_model,testing)
+  print(date_range)
+  c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
+    as.numeric(predict_data),
+    testingTarget
+  ) 
+}
+
 
 #####准备数据from tdx
 hs300_idx<-read.csv("~/temp/0000300.csv",header=F,skip=1,encoding = "UTF-8")
@@ -231,5 +278,24 @@ pred_result3<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",]
                       kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,0)
                       
                     },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next3day_roc")
+
+write.csv(pred_result3, file = "~/temp/kpca_svm_pred_result3.txt",row.names=F)
+
+
+
+pred_result3<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2014-01-03",])), 1, 
+                    function(x,ts,factor_col,prd_col,eemd_l){
+                      
+                      end_date_id<-which(.indexDate(ts)==x)
+                      start_date<-.indexDate(ts)[(end_date_id-40)]
+                      
+                      start_end_str<-paste(as.Date(start_date,format="%Y-%m-%d",origin = "1970-01-01"),
+                                           "/",
+                                           as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
+                                           sep="")
+                      
+                      pca_eemd_svm_ga_func(ts[start_end_str],eemd_l,start_end_str,factor_col,prd_col,0)
+                      
+                    },HS300_idx_ts["2000-01-01/",],"close","ema3_next3day_roc",eemd_l)
 
 write.csv(pred_result3, file = "~/temp/kpca_svm_pred_result3.txt",row.names=F)

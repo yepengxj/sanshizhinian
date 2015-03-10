@@ -88,6 +88,7 @@ colnames(xxx)<-c("close","high","low","open","vol")
 xxx<-xxx[!xxx$close==0]
 plot(xxx["2006-01-01/2008-01-01"])
 tail(xxx,10)
+
 eemd_list<-list(
   list(func_name="Rlibeemd_eemd_func",func=Rlibeemd_eemd_func)
   )

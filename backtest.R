@@ -9,10 +9,8 @@ xxx<-xts(xxx[,c(4,5,6,7,12)],order.by=as.Date(xxx[,1],"%Y-%m-%d"))
 colnames(xxx)<-c("close","high","low","open","vol")
 
 
-date_range<-"2009-07-01/2014-07-01"
-x<-"pred_resRlibeemd_eemd_func_get_acf1_get_k1_noise_t_smooth"
-
-
+date_range<-"2008-01-15/2009-01-15"
+x<-"pred_resRlibeemd_eemd_func_2008-01-01_2009-01-01"
 backtest_func<-function(date_range,xxx){
   
   aaply(list.files("~/temp/",pattern="^pred_resRlibeemd_eemd"),1,function(x,xxx,date_range){

@@ -222,7 +222,7 @@ pred_col_list<-c("ema3_next3day_roc","ema3_next1day_roc","ema3_next2day_roc")
 for(eemd_l in (eemd_list)){
   for(datarange_l in datarange_list)
   {
-    for(fator_col in factor_col_list )
+    for(factor_col in factor_col_list )
     {
       for(pred_col in pred_col_list)
       {
@@ -238,9 +238,9 @@ for(eemd_l in (eemd_list)){
                              
                               pca_eemd_svm_ga_func(ts[start_end_str,],eemd_l,start_end_str,factor_col,prd_col,0)
                               
-                            },HS300_idx_ts["2000-01-01/",],fator_col,pred_col,eemd_l)
+                            },HS300_idx_ts["2000-01-01/",],factor_col,pred_col,eemd_l)
         
-        file_name<-paste("pca_eemd_svm",fator_col,pred_col,eemd_l$func_name,sub("\\/","_",datarange_l),sep="_")
+        file_name<-paste("pca_eemd_svm",factor_col,pred_col,eemd_l$func_name,sub("\\/","_",datarange_l),sep="_")
         
         file_path<-paste("~/temp/","pred_res",file_name,sep="")
         

@@ -1,8 +1,6 @@
 library(plyr)
 library(EMD)
-library(Rlibeemd)
 library(XML)
-library(quantstrat)
 library(dtw)
 
 cntrade <- function(tickers, path = "", start = 19910101, end = "") {

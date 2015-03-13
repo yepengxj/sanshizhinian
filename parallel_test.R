@@ -9,6 +9,14 @@ library(psych)
 library(XML)
 library(Rlibeemd)
 
+
+tickers<-"0000300"
+path<-"~/temp"
+start<-19990101
+end<-as.numeric(format(Sys.Date() , "%Y%m%d"))
+
+cntrade(c('0000300'), path = "~/temp", start = 19900101, end = end)
+
 pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_range,delay_range)
 {
   print(sprintf("data_range:%s, factor_col:%s, pred_col:%s",date_range,factor_col,prd_col))

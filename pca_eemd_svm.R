@@ -98,30 +98,29 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
   ) 
 }
 
-
-pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_range)
+pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_range,delay_range)
 {
-  
+  print(sprintf("data_range:%s, factor_col:%s, pred_col:%s",date_range,factor_col,prd_col))
   curr_ts<-ts[,factor_col]
-  data_eemd<-eemd_l$func(as.numeric(curr_ts[,factor_col]))
+  data_eemd<-eval(call(eemd_l,as.matrix(curr_ts[,factor_col])))
   
-  print(data_eemd$nimf)
   eemd_pcv<-principal(data_eemd$imf,nfactors=(data_eemd$nimf),rotate="none")
   t<-max(which(eemd_pcv$values>0.85))
-  print(t)
-  dim(data_eemd$imf)
-  eemd_pcv_denoise<-data_eemd$imf%*%eemd_pcv$loadings[,(1:t)]
-
   
-  train_data<-as.matrix(ts[,prd_col])
+  eemd_pcv_denoise<-data_eemd$imf%*%eemd_pcv$loadings[,(1:t)]
+  
+  train_data<-as.matrix(ts[1:(nrow(ts)-delay_range),prd_col])
   
   train_set<-nrow(train_data)-pred_range
   training<-eemd_pcv_denoise[1:train_set,]
   trainingTarget<-train_data[1:train_set,prd_col]
   
   
-  testing<-matrix(eemd_pcv_denoise[(train_set:nrow(eemd_pcv_denoise)),],ncol=dim(eemd_pcv_denoise)[2])
+  testing<-matrix(eemd_pcv_denoise[(train_set:nrow(train_data)),],ncol=dim(eemd_pcv_denoise)[2])
   testingTarget<-matrix(train_data[(train_set:nrow(train_data)),prd_col],ncol=length(prd_col))
+  
+  predecting<-matrix(eemd_pcv_denoise[((nrow(eemd_pcv_denoise)-pred_range):nrow(eemd_pcv_denoise)),],ncol=dim(eemd_pcv_denoise)[2])
+  predectTarget<-matrix(ts[((nrow(ts)-pred_range):nrow(ts)),prd_col],ncol=length(prd_col))
   
   GA <- ga(type = "real-valued",
            fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
@@ -129,13 +128,18 @@ pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_rang
            maxiter = 50)
   
   svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
-  print("svm_model")
-  predict_data<-predict(svm_model,testing)
-  print(date_range)
-  c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
-    as.numeric(predict_data),
-    testingTarget
-  ) 
+  predict_data<-predict(svm_model,predecting)
+  res<-data.frame("date"=as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
+                  "pred"=as.numeric(predict_data),
+                  "test"=predectTarget,
+                  "factor_col"=factor_col,
+                  "prd_col"=prd_col,
+                  "data_range"=date_range
+  )
+  
+  print(res)
+  
+  res
 }
 
 #####准备数据from tdx
@@ -212,13 +216,14 @@ HS300_idx_ts$log2high_low5<-sqrt(runSum(log2(HS300_idx_ts[,"high"]/HS300_idx_ts[
 
 ##SVM
 datarange_list<-c("2014-03-09/2014-03-12","2006-01-01/2008-01-01","2008-01-01/2009-01-01","2006-01-01/2009-01-01","2009-01-01/2014-07-01","2014-07-01/2015-02-11")
+#datarange_list<-c("205-03-01/")
+eemd_list<-c("Rlibeemd_eemd_func")
 
-eemd_list<-list(
-  list(func_name="Rlibeemd_eemd_func",func=Rlibeemd_eemd_func)
-)
 factor_col_list<-c("close","ema3_close")
-pred_col_list<-c("ema3_next3day_roc","ema3_next1day_roc","ema3_next2day_roc")
 
+pred_col_list<-list(data.frame(pred_col="ema3_next3day_roc",delay_range=3),
+                    data.frame(pred_col="ema3_next2day_roc",delay_range=2),
+                    data.frame(pred_col="ema3_next1day_roc",delay_range=1))  
 for(eemd_l in (eemd_list)){
   for(datarange_l in datarange_list)
   {
@@ -236,11 +241,11 @@ for(eemd_l in (eemd_list)){
                                                    as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
                                                    sep="")
                              
-                              pca_eemd_svm_ga_func(ts[start_end_str,],eemd_l,start_end_str,factor_col,prd_col,0)
+                              pca_eemd_svm_ga_func(ts[start_end_str,],eemd_l,start_end_str,factor_col,as.character(pred_col$pred_col),0,pred_col$delay_range)
                               
                             },HS300_idx_ts["2000-01-01/",],factor_col,pred_col,eemd_l)
         
-        file_name<-paste("pca_eemd_svm",factor_col,pred_col,eemd_l$func_name,sub("\\/","_",datarange_l),sep="_")
+        file_name<-paste("pca_eemd_svm",factor_col,as.character(pred_col$pred_col),eemd_l$func_name,sub("\\/","_",datarange_l),sep="_")
         
         file_path<-paste("~/temp/","pred_res",file_name,sep="")
         

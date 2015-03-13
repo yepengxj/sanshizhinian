@@ -72,39 +72,39 @@ svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
   
 }
 
+  kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
+  {
+    
+    model_data<-as.matrix(ts[,c(factor_col,prd_col)])
+    
+    #model_data_normalize<-cbind(t(aaply(model_data[,normalize_col],2,normalize_func)),model_data[,non_normalize_col] )
+    model_data_normalize<-t(aaply(model_data,2,normalize_func))
+    model_data_normalize_kpca<-pcv(kpca(~.,data=data.frame(model_data_normalize[,factor_col]),kernel="rbfdot",
+                                        kpar=list(sigma=0.2),features=2))
+    #train_set<-as.integer(nrow(model_data_normalize)*0.9)
+    train_set<-nrow(model_data_normalize_kpca)-pred_range
+    training<-model_data_normalize_kpca[1:train_set,]
+    trainingTarget<-model_data_normalize[1:train_set,prd_col]
+    
+    
+    testing<-matrix(model_data_normalize_kpca[(train_set:nrow(model_data_normalize_kpca)),],ncol=dim(model_data_normalize_kpca)[2])
+    testingTarget<-matrix(model_data_normalize[(train_set:nrow(model_data_normalize)),prd_col],ncol=length(prd_col))
+    
+    GA <- ga(type = "real-valued",
+             fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
+             min = c(0, 0), max = c(100, 100), popSize = 50,
+             maxiter = 50)
+    
+    svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
+    print("svm_model")
+    predict_data<-predict(svm_model,testing)
+    print(date_range)
+    c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
+      as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
+      as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col])))
+    ) 
+  }
 
-kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
-{
-  
-  model_data<-as.matrix(ts[,c(factor_col,prd_col)])
-  
-  #model_data_normalize<-cbind(t(aaply(model_data[,normalize_col],2,normalize_func)),model_data[,non_normalize_col] )
-  model_data_normalize<-t(aaply(model_data,2,normalize_func))
-  model_data_normalize_kpca<-pcv(kpca(~.,data=data.frame(model_data_normalize[,factor_col]),kernel="rbfdot",
-                                      kpar=list(sigma=0.2),features=2))
-  #train_set<-as.integer(nrow(model_data_normalize)*0.9)
-  train_set<-nrow(model_data_normalize_kpca)-pred_range
-  training<-model_data_normalize_kpca[1:train_set,]
-  trainingTarget<-model_data_normalize[1:train_set,prd_col]
-  
-  
-  testing<-matrix(model_data_normalize_kpca[(train_set:nrow(model_data_normalize_kpca)),],ncol=dim(model_data_normalize_kpca)[2])
-  testingTarget<-matrix(model_data_normalize[(train_set:nrow(model_data_normalize)),prd_col],ncol=length(prd_col))
-  
-  GA <- ga(type = "real-valued",
-           fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
-           min = c(0, 0), max = c(100, 100), popSize = 50,
-           maxiter = 50)
-  
-  svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
-  print("svm_model")
-  predict_data<-predict(svm_model,testing)
-  print(date_range)
-  c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
-    as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
-    as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col])))
-  ) 
-}
 
 pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_range,delay_range)
 {
@@ -253,7 +253,7 @@ for(eemd_l in (eemd_list)){
                               
                             },HS300_idx_ts["2000-01-01/",],factor_col,pred_col,eemd_l)
         
-        file_name<-paste("pca_eemd_svm",factor_col,as.character(pred_col$pred_col),eemd_l$func_name,sub("\\/","_",datarange_l),sep="_")
+        file_name<-paste("pca_eemd_svm",factor_col,as.character(pred_col$pred_col),eemd_l,sub("\\/","_",datarange_l),sep="_")
         
         file_path<-paste("~/temp/","pred_res",file_name,sep="")
         

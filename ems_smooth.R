@@ -3,6 +3,61 @@ library(EMD)
 library(XML)
 library(dtw)
 
+
+
+xts_shitf_days<-function(xts_data,shitf_days)
+{
+  if(shitf_days>0)
+  {
+    new_idx_date<-.indexDate(xts_data)[1:(length(.indexDate(xts_data))-shitf_days)]
+    
+    shitf_data<-as.data.frame(xts_data)[(1+shitf_days):length(.indexDate(xts_data)),]
+    
+    xts(shitf_data,order.by=(as.Date(new_idx_date,format="%Y-%m-%d",origin = "1970-01-01")))
+    
+  }
+  else
+  {
+    new_idx_date<-.indexDate(xts_data)
+    shitf_data<-as.data.frame(xts_data)
+    dim_data<-dim(shitf_data)
+    for(i in (1:abs(shitf_days)))
+    {
+      shitf_data<-rbind(rep(NA,dim_data[2]),shitf_data)
+    }
+    
+    xts(shitf_data[1:length(new_idx_date),],order.by=(as.Date(new_idx_date,format="%Y-%m-%d",origin = "1970-01-01")))
+    
+  }
+  
+}
+
+#=====EEMD趋势拟合测试
+
+#归一化
+normalize_func<-function(x)
+{
+  (x-min(x))/(max(x)-min(x))+1
+}
+
+denormalize_func<-function(x,max_x,min_x)
+{
+  (x-1)*(max_x-min_x)+min_x
+}
+
+
+svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
+  #建立SVM
+  svm_model<-svm(x=training,y=trainingTarget,cost=x[1],gamma=x[2])
+  
+  #做预测
+  pred<-predict(svm_model,testing)
+  
+  #calc_fitness(MSE)
+  -sqrt(sum((testingTarget-pred)^2))/length(testingTarget)
+  
+}
+
 cntrade <- function(tickers, path = "", start = 19910101, end = "") {
   
   address <- "http://quotes.money.163.com/service/chddata.html"

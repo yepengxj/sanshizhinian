@@ -7,7 +7,6 @@ library(Rlibeemd)
 library(XML)
 library(quantstrat)
 library(dtw)
-library(dtw)
 library(psych)
 
 

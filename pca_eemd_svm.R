@@ -6,7 +6,15 @@ library("e1071")
 library("kernlab")
 library("GA")
 library(psych)
+library(XML)
+library(Rlibeemd)
 
+tickers<-"0000300"
+path<-"~/temp"
+start<-19990101
+end<-as.numeric(format(Sys.Date() , "%Y%m%d"))
+
+cntrade(c('0000300'), path = "~/temp", start = 19900101, end = end)
 
 
 

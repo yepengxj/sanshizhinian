@@ -54,7 +54,7 @@ svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
   pred<-predict(svm_model,testing)
   
   #calc_fitness(MSE)
-  -sqrt(sum((testingTarget-pred)^2))/length(testingTarget)
+  -sqrt(sum((testingTarget-pred)^2)/length(testingTarget))
   
 }
 

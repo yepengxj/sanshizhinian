@@ -64,24 +64,35 @@ svm_mse_fitness<-function(x,training,trainingTarget,testing,testingTarget){
   
 }
 
-
-kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
+data_range:2013-11-06/2014-01-02,pred_range:3,delay_range:3,kpca_features:4
+ts<-HS300_idx_ts["2013-11-06/2014-01-02",]
+pred_range<-3
+delay_range<-3
+kpca_features<-4
+prd_col<-"ema3_next3day_roc"
+kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range,delay_range,kpca_features)
 {
-  
+  print(sprintf("data_range:%s,pred_range:%d,delay_range:%d,kpca_features:%d",date_range,pred_range,delay_range,kpca_features))
   model_data<-as.matrix(ts[,c(factor_col,prd_col)])
   
   #model_data_normalize<-cbind(t(aaply(model_data[,normalize_col],2,normalize_func)),model_data[,non_normalize_col] )
   model_data_normalize<-t(aaply(model_data,2,normalize_func))
+  
   model_data_normalize_kpca<-pcv(kpca(~.,data=data.frame(model_data_normalize[,factor_col]),kernel="rbfdot",
-                                      kpar=list(sigma=0.2),features=2))
+                                      kpar=list(sigma=0.2),features=kpca_features))
+  
+  train_data<-as.matrix(model_data_normalize_kpca[1:(nrow(model_data_normalize_kpca)-delay_range),])
   #train_set<-as.integer(nrow(model_data_normalize)*0.9)
-  train_set<-nrow(model_data_normalize_kpca)-pred_range
-  training<-model_data_normalize_kpca[1:train_set,]
+  train_set<-nrow(train_data)-pred_range
+  training<-train_data[1:train_set,]
   trainingTarget<-model_data_normalize[1:train_set,prd_col]
   
+  testing<-matrix(train_data[(train_set:nrow(train_data)),],ncol=dim(train_data)[2])
+  testingTarget<-matrix(model_data_normalize[(train_set:nrow(train_data)),prd_col],ncol=length(prd_col))
   
-  testing<-matrix(model_data_normalize_kpca[(train_set:nrow(model_data_normalize_kpca)),],ncol=dim(model_data_normalize_kpca)[2])
-  testingTarget<-matrix(model_data_normalize[(train_set:nrow(model_data_normalize)),prd_col],ncol=length(prd_col))
+  predecting<-matrix(model_data_normalize_kpca[nrow(model_data_normalize_kpca),],ncol=dim(model_data_normalize_kpca)[2])
+  predectTarget<-matrix(model_data[nrow(model_data_normalize),prd_col],ncol=length(prd_col))
+
   
   GA <- ga(type = "real-valued",
            fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
@@ -89,59 +100,24 @@ kpca_svm_ga_func<-function(ts,date_range,factor_col,prd_col,pred_range)
            maxiter = 50)
   
   svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
-  print("svm_model")
-  predict_data<-predict(svm_model,testing)
-  print(date_range)
-  c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
-    as.numeric(denormalize_func(predict_data,max(model_data[,prd_col]), min(model_data[,prd_col]))),
-    as.numeric(denormalize_func(testingTarget,max(model_data[,prd_col]), min(model_data[,prd_col])))
-  ) 
+  predict_data<-denormalize_func(predict(svm_model,predecting),max(model_data[,prd_col]),min(model_data[,prd_col]))
+
+  res<-data.frame("date"=as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
+                  "pred"=as.numeric(predict_data),
+                  "test"=predectTarget,
+                  "prd_col"=prd_col,
+                  "data_range"=date_range,
+                  "kpca_features"=kpca_features,
+                  "pred_range"=pred_range,
+                  "delay_range"=delay_range
+                  
+  )
+  
+  print(res)
+  
+  res 
 }
 
-
-date_range<-"2007-07-01/2008-01-01"
-ts<-HS300_idx_ts[date_range]
-factor_col<-"close"
-prd_col<-"ema3_next1day_roc"
-eemd_l<-  list(func_name="Rlibeemd_eemd_func",func=Rlibeemd_eemd_func)
-pred_range<-0
-pca_eemd_svm_ga_func<-function(ts,eemd_l,date_range,factor_col,prd_col,pred_range)
-{
-  curr_ts<-ts[,factor_col]
-  data_eemd<-eemd_l$func(as.numeric(curr_ts[,factor_col]))
-  
-  print(data_eemd$nimf)
-  eemd_pcv<-principal(data_eemd$imf,nfactors=(data_eemd$nimf),rotate="none")
-  t<-max(which(eemd_pcv$values>0.85))
-  print(t)
-  dim(data_eemd$imf)
-  eemd_pcv_denoise<-data_eemd$imf%*%eemd_pcv$loadings[,(1:t)]
-
-  
-  train_data<-as.matrix(ts[,prd_col])
-  
-  train_set<-nrow(train_data)-pred_range
-  training<-eemd_pcv_denoise[1:train_set,]
-  trainingTarget<-train_data[1:train_set,prd_col]
-  
-  
-  testing<-matrix(eemd_pcv_denoise[(train_set:nrow(eemd_pcv_denoise)),],ncol=dim(eemd_pcv_denoise)[2])
-  testingTarget<-matrix(train_data[(train_set:nrow(train_data)),prd_col],ncol=length(prd_col))
-  
-  GA <- ga(type = "real-valued",
-           fitness = svm_mse_fitness, training, trainingTarget, testing, testingTarget,
-           min = c(0, 0), max = c(100, 100), popSize = 50,
-           maxiter = 50)
-  
-  svm_model<-svm(x=training,y=trainingTarget,cost=summary(GA)$solution[1,1],gamma=summary(GA)$solution[1,2])
-  print("svm_model")
-  predict_data<-predict(svm_model,testing)
-  print(date_range)
-  c(as.numeric(format(as.Date(strsplit(date_range,"/",fixed=T)[[1]][2]),"%Y%m%d")), 
-    as.numeric(predict_data),
-    testingTarget
-  ) 
-}
 
 
 #####准备数据from tdx
@@ -241,8 +217,9 @@ pred_result1<-aaply(as.numeric(.indexDate(HS300_idx_ts["2014-01-01/2015-02-03",]
                                           as.Date(x,format="%Y-%m-%d",origin = "1970-01-01"),
                                           sep="")
                      
-                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,0)
-                     
+                     # (ts,date_range,factor_col,prd_col,pred_range,delay_range,kpca_features)
+                     kpca_svm_ga_func(ts[start_end_str],start_end_str,factor_col,prd_col,3,1,4)
+                    
                    },HS300_idx_ts["2000-01-01/",],factor_col,"ema3_next1day_roc")
 
 write.csv(pred_result1, file = "~/temp/kpca_svm_pred_result1.txt",row.names=F)

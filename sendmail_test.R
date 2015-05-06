@@ -1,8 +1,7 @@
 library("mailR")
 library(XML)
 tt<-readHTMLTable(htmlParse("http://abcfund.cn/data/realdata.php?p=95",encoding="GBK"), header = F)[[1]]
-test_data<-tail(tt[order(tt[,23],na.last=F),c(1,2,9,16,22,23)],5)
-
+test_data<-head(tt[order(-as.numeric(sub("%","",tt[,23])),na.last=T) ,c(1,2,9,16,22,23)],5)
 
 html_content<-"<html><table>"
 for(i in 1:dim(test_data)[1])
@@ -10,7 +9,6 @@ for(i in 1:dim(test_data)[1])
   html_content<-paste(html_content,"<tr>",sep = "")
   for(j in 1:dim(test_data)[2])
   {
-    print(sprintf("%i,%i",i,j))
     html_content<-paste(html_content,sprintf("<td>%s</td>",test_data[i,j]),sep = "")
   }
   html_content<-paste(html_content,"</tr>",sep = "")

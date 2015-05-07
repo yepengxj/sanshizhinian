@@ -22,7 +22,7 @@ send.mail(from = "13999806237@139.com",
           html = TRUE,
           inline = TRUE,
           encoding="utf-8",
-          smtp = list(host.name = "smtp.139.com", port = 25, user.name = "13999806237", passwd = "yp1111", ssl = F),
+          smtp = list(host.name = "smtp.139.com", port = 25, user.name = "", passwd = "", ssl = F),
           authenticate = TRUE,
           send = TRUE)
 

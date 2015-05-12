@@ -11,7 +11,7 @@ tt<-readHTMLTable(base_data, header = T)[[1]]
 test_data<-tt[order(-as.numeric(sub("%","",tt[,23])),na.last=T) ,c(1,2,9,16,22,23)]
 test_data<-test_data[test_data[,6]!="-",]
 
-html_content<-"<html><table>"
+html_content<-"<html><table border=1>"
 
 
 html_content<-paste(html_content,"<tr><td>溢价/折价</td>",sep = "")
@@ -71,3 +71,5 @@ send.mail(from = "13999806237@139.com",
           smtp = list(host.name = "smtp.139.com", port = 25, user.name = "", passwd = "", ssl = F),
           authenticate = TRUE,
           send = TRUE)
+
+View(test_data)

@@ -1,6 +1,5 @@
 library(EMD)
 library(quantstrat)
-library(dtw)
 library(plyr)
 library("e1071")
 library("hht")

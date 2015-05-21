@@ -6,7 +6,63 @@ library("hht")
 library("kernlab")
 
 #####准备数据from tdx
-HS300_fund<-read.table('~/Downloads/SZ159919.txt',header=F,sep="\t",skip = 2,fill=T)
+#file_list<-c("SZ150009.txt","SZ150052.txt","SZ150077.txt","SZ150105.txt","SZ150141.txt","SZ150168.txt")
+
+
+
+
+
+
+
+file_list<-c("SZ150107.txt","SZ150086.txt","SZ150091.txt","SZ150058.txt","SZ150075.txt")
+
+#HS300_fund<-read.table('~/Downloads/data/SZ399300.txt',header=F,sep="\t",skip = 2,fill=T)
+HS300_fund<-read.table('~/Downloads/data/SZ399101.txt',header=F,sep="\t",skip = 2,fill=T)
+HS300_fund<-HS300_fund[-nrow(HS300_fund),]
+HS300_fund_ts<-xts(HS300_fund[,-1],order.by=as.Date(HS300_fund[,1],format="%m/%d/%Y",origin = "1970-01-01"))
+colnames(HS300_fund_ts)<-c("open","high","low","close","vol","amount")
+
+cor_data<-HS300_fund_ts[,"close"]
+
+x<-"SZ150009.txt"
+test_data<-aaply(file_list,1,function(x,cor_data) {
+  print(x)
+  B_close<-read.table(paste('~/Downloads/data/',x,sep=""),header=F,sep="\t",skip = 2,fill=T)
+  B_close<-B_close[-nrow(B_close),]
+  B_close_ts<-xts(B_close[,-1],order.by=as.Date(B_close[,1],format="%m/%d/%Y",origin = "1970-01-01"))
+  colnames(B_close_ts)<-c("open","high","low","close","vol","amount")
+  print(tail(B_close_ts,5))
+  B_close_ts<-merge(cor_data,B_close_ts[,"close"])
+  return(B_close_ts[,-1])
+},cor_data)
+
+
+test_data<-merge(cor_data,t(test_data))
+
+test_data<-test_data[!(is.na(test_data[,2]) | 
+              is.na(test_data[,3]) | 
+              is.na(test_data[,4]) | 
+              is.na(test_data[,5])| 
+              is.na(test_data[,6]) ),]
+
+cor(test_data[,-1],method = c("pearson"))
+cor(test_data[,-1],method = c("kendall"))
+cor(test_data[,-1],method = c("spearman"))
+method = c("pearson", "kendall", "spearman")
+ !(is.na(test_data[,2]) | 
+    is.na(test_data[,3]) | 
+    is.na(test_data[,4]) | 
+    is.na(test_data[,5])| 
+    is.na(test_data[,6]) | 
+    is.na(test_data[,7]) )
+
+
+test_data[,c(5,7)]
+
+plot(test_data[,5],ylim=c(min(test_data[,-1],na.rm=T),max(test_data[,-1])))
+lines(test_data[,7])
+
+HS300_fund<-read.table('~/Downloads/data/SZ399300.txt',header=F,sep="\t",skip = 2,fill=T)
 HS300_fund<-HS300_fund[-nrow(HS300_fund),]
 HS300_fund_ts<-xts(HS300_fund[,-1],order.by=as.Date(HS300_fund[,1],format="%m/%d/%Y",origin = "1970-01-01"))
 colnames(HS300_fund_ts)<-c("open","high","low","close","vol","amount")

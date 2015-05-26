@@ -8,7 +8,7 @@ data<-getNodeSet(base_data,"//body/data/table/tbody/tr/td/span")
 removeNodes(data)
 
 tt<-readHTMLTable(base_data, header = T)[[1]]
-test_data<-tt[order(-as.numeric(sub("%","",tt[,23])),na.last=T) ,c(1,2,9,16,22,23)]
+test_data<-tt[order(-as.numeric(sub("%","",tt[,24])),na.last=T) ,c(1,2,16,22,23,24)]
 test_data<-test_data[test_data[,6]!="-",]
 
 html_content<-"<html><table border=1>"
@@ -73,3 +73,4 @@ send.mail(from = "13999806237@139.com",
           send = TRUE)
 
 View(test_data)
+View(tt)

@@ -43,7 +43,8 @@ test_data<-test_data[!(is.na(test_data[,2]) |
               is.na(test_data[,3]) | 
               is.na(test_data[,4]) | 
               is.na(test_data[,5])| 
-              is.na(test_data[,6]) ),]
+              is.na(test_data[,6]) |
+              is.na(test_data[,7])),]
 
 cor(test_data[,-1],method = c("pearson"))
 cor(test_data[,-1],method = c("kendall"))

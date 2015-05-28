@@ -1,6 +1,7 @@
 library("mailR")
 library(XML)
 
+
 base_data<-htmlParse("http://abcfund.cn/data/realdata.php?p=95",encoding="GBK")
 
 data<-getNodeSet(base_data,"//body/data/table/tbody/tr/td/span")

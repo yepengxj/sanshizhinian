@@ -60,4 +60,9 @@ ddply(data_dataframe2,.(stock_id,date),
         print(dim(per_stock_date))
       })
 
-stream_out(data_dataframe, con = file("~/data_dataframe.json",open='at'))
+stream_out(temp_data, con = file("~/data_dataframe.json",open='at'))
+
+
+read.csv("~/thefile.txt",sep="\t")
+
+stream_test[stream_test$volumn1<0,]

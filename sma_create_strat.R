@@ -52,9 +52,9 @@ summary(strategy)
 #下面是quantstrat包的关键：加入指标、信号和规则。
 
 # 加入一个指标，10月均线
-add.indicator(strategy = q.strategy, name = "SMA", arguments = list(x = quote(Cl(mktdata)[,"close"]), 
+add.indicator(strategy = q.strategy, name = "SMA", arguments = list(x = quote(Cl(mktdata)[,1]), 
                                                                     n = 5), label = "nFAST")
-add.indicator(strategy = q.strategy, name = "SMA", arguments = list(x = quote(Cl(mktdata)[,"close"]), 
+add.indicator(strategy = q.strategy, name = "SMA", arguments = list(x = quote(Cl(mktdata)[,1]), 
                                                                          n = 20), label = "nSLOW")
 
 add.indicator(strategy = q.strategy, name = "MACD", arguments = list(x = quote(Cl(mktdata)[,"close"]), 
@@ -126,13 +126,11 @@ add.signal(q.strategy,name="sigCrossover",
 
 
 # 加入规则，买入规则和卖出规则
-add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "buy_signal_add", 
-                                                           sigval = TRUE, orderqty = 900, ordertype = "market", orderside = "long", 
-                                                           pricemethod = "market"), type = "enter", path.dep = TRUE) # 买入数量为900股
+add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "nFAST.gt.nSLOW", 
+                                                           sigval = TRUE, orderqty = 900, ordertype = "market", orderside = "long"), type = "enter") # 买入数量为900股
 
-add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "sell_signal_add", 
-                                                           sigval = TRUE, orderqty = "all", ordertype = "market", orderside = "long", 
-                                                           pricemethod = "market"), type = "exit", path.dep = TRUE)
+add.rule(q.strategy, name = "ruleSignal", arguments = list(sigcol = "nFAST.lt.nSLOW", 
+                                                           sigval = TRUE, orderqty = "all", ordertype = "market", orderside = "long"), type = "exit")
 
 
 summary(getStrategy(q.strategy))

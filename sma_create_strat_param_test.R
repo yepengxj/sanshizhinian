@@ -1,7 +1,7 @@
 library(quantstrat)
 
-save.strategy(q.strategy)
-
+q.strategy <- "qFaber"
+load.strategy(q.strategy)
 .FastSMA = (3:10)
 .SlowSMA = (20:30)
 
@@ -28,8 +28,10 @@ add.distribution.constraint(q.strategy,
                             label = 'SMA',
                             store=TRUE)
 
-require(doMC)
-registerDoMC(cores=8)
+library(doParallel)
+cl <- makeCluster(4)
+registerDoParallel(cl)
+addPosLimit(q.strategy, 'ZSYH', timestamp="2005-01-01", maxpos=50000, minpos=0)
 
 results <- apply.paramset(q.strategy,
                           paramset.label='SMA',

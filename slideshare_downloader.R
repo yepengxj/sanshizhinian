@@ -1,5 +1,6 @@
 library(XML)
 library("plyr")
+library(RCurl)
 
 #base_data<-htmlParse("~/Desktop/Untitled Document.html")
 
@@ -8,22 +9,23 @@ library("plyr")
 #data_href<-laply(data,xmlGetAttr,"href")
 
 #strsplit(data_href,'/',fixed=T)
-add_href<-c("the-most-valuable-customer-on-earth1298-comic-book-analysis-with-oracels-big-data-tools",
-  "sqoop-on-spark-for-dataingestion",
-  "Self-Service Provisioning and Hadoop Management with Apache Ambari_files",
-  "is-olap-dead-in-the-age-of-big-data"
+add_href<-c("https://www.slideshare.net/econsultancy/digital-transformation-ashley-friedlein-ceo-econsultancy",
+            "https://www.slideshare.net/tsachtje/how-to-digital-transformation-for-marketing"
 )
-data_href<-paste0("http://www.slideshare.net/Hadoop_Summit/",add_href)
+data_href<-c("https://www.slideshare.net/ISMeCompany/masterclass-online-marketingstrategie"
+)
+#data_href<-paste0("http://www.slideshare.net/Hadoop_Summit/",add_href)
 for(url in data_href)
 {
   print(url)
   slide_name<-strsplit(url,'/',fixed=T)[[1]][5]
-  slide_dir<-paste("~/hadoop2015/",slide_name,sep="")
+  slide_dir<-paste("~/digitaltransform/",slide_name,sep="")
   dir.create(slide_dir)
-  slide_data<-htmlParse(url)
+  xData <- getURL(url)
+  slide_data<-htmlParse(xData)
   slide_img_list<-getNodeSet(slide_data,"//img[@class='slide_image']")
   
-  slide_img<-laply(slide_img_list,xmlGetAttr,"data-normal")
+  slide_img<-laply(slide_img_list,xmlGetAttr,"data-full")
   
   i<-0
   for(slid_img_url in slide_img)
@@ -34,4 +36,3 @@ for(url in data_href)
     i<-i+1
   }
 }
-
